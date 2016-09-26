@@ -1,4 +1,4 @@
-package main
+package crawler;
 
 import (
 	"fmt"
@@ -6,8 +6,11 @@ import (
 	"net/http"
 )
 
+type LinkedIn struct {
+	url string
+}
 
-func crawl() {
+func (i *LinkedIn) Crawl() {
 
 	url := "https://www.dice.com/jobs?q=php"
 
@@ -16,7 +19,7 @@ func crawl() {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("errorr")
+		fmt.Println("error")
 	}
 
 	defer resp.Body.Close()
@@ -26,10 +29,3 @@ func crawl() {
 
 	fmt.Println("response" , string(body))
 }
-
-
-func main() {
-	crawl()
-}
-
-
