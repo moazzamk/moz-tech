@@ -14,7 +14,7 @@ import (
 
 func main() {
 	diceCrawler := new(crawler.Dice)
-	diceCrawler.Url = "https://www.dice.com/jobs?q=php"
+	diceCrawler.Url = "https://www.dice.com/jobs?q=php&l=&searchid=5553623028542"
 	diceCrawler.Crawl()
 
 
