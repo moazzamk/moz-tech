@@ -4,12 +4,16 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"../goquery"
+	"net/http"
+	"io/ioutil"
+	"encoding/json"
+	"github.com/PuerkitoBio/goquery"
 	"log"
 )
 
 type Dice struct {
 	Url string
+	Skills []string
 }
 
 /*
@@ -19,51 +23,49 @@ func (i *Dice) getSalaryRange(content string ) []string {
 */
 
 func (dice *Dice) Crawl() {
-	//dat, _ := ioutil.ReadFile(`./hourly_pay.html`)
-	//content := string(dat)
+	url := dice.Url + `?text=php`
+	fmt.Println(`URL: ` + url)
 
+	rs := dice.fetchSearchResults(url)
 
-	dice.getDetails(`https://www.dice.com/jobs/detail/Senior-PHP-Developer-RealPage-Inc.-Richardson-TX-75082/10111244/641877?icid=sr1-1p&q=php&l=Dallas,%20TX`)
+	// @todo: use the nextUrl to fetch the next set of results for the query 
+	detailUrl := ``
+	nextUrl := rs[`nextUrl`].(string)
+	for nextUrl != `` {
+		items := rs[`resultItemList`].([]interface{})
+		for _,item := range items {
+			obj := item.(map[string]interface{})
+			detailUrl = obj[`detailUrl`].(string)
+			dice.getDetails(detailUrl)
+		}
 
-return;
-/*	fmt.Println("skill", dice.getJobSkill(content))
-
-	tel, yo  := dice.getTelecommuteAndTravel(content);
-	fmt.Println(tel, ":", yo);
-
-	fmt.Println(dice.getPostedDate(content))
-
-
-/*
-	url := dice.Url
-
-	req, err := http.NewRequest("GET", url, nil)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("error")
+		nextUrl = rs[`nextUrl`].(string)
+		rs = dice.fetchSearchResults(`http://service.dice.com` + nextUrl)
 	}
-	fmt.Println("Search request complete")
-
-	defer resp.Body.Close();
-
-	//re := regexp.MustCompile("https://www.dice.com/jobs/detail/[^\\\"]+")
-	re := regexp.MustCompile("https://www.dice.com/jobs/d[^\\ ]+")
-
-	body, _ := ioutil.ReadAll(resp.Body)
-	content := string(body)
-	content = strings.Replace(content, "\r", ` `, -1)
-	content = strings.Replace(content, "\n", ` `, -1)
-
-	matches := re.FindAllString(content, 1000)
-
-	for i := 0; i < len(matches); i++ {
-		dice.getDetails(matches[i])
-	}
-*/
 }
 
+func (dice *Dice) fetchSearchResults(url string) map[string]interface{} {
+	var response map[string]interface{}
+
+	resp, err := http.Get(url)
+	if (err != nil) {
+		fmt.Println(err)
+		return nil
+	}
+
+	defer resp.Body.Close()
+
+	body, _ := ioutil.ReadAll(resp.Body)
+
+
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		fmt.Println(`Could not decode response`, err)
+		return nil
+	}
+
+	return response
+}
 
 func (dice *Dice) getDetails(url string) {
 	doc, err := goquery.NewDocument(url)
@@ -76,6 +78,7 @@ func (dice *Dice) getDetails(url string) {
 }
 
 func (dice *Dice) getTelecommuteAndTravel(content string) (int, int) {
+	// This method needs to be re-implemented as we no longer pass content as string to detail methods
 	telecommute := 0
 	if !strings.Contains(content, `Telecommuting not available`) {
 		telecommute = 1
@@ -90,6 +93,7 @@ func (dice *Dice) getTelecommuteAndTravel(content string) (int, int) {
 }
 
 func (dice *Dice) getPostedDate(content string) string {
+	// This method needs to be re-implemented as we no longer pass content as string to detail methods
 
 	// @todo : process jobs posted hours ago not weeks ago
 
@@ -102,6 +106,7 @@ func (dice *Dice) getPostedDate(content string) string {
 }
 
 func (dice *Dice) getJobType(doc *goquery.Document) string {
+	// This method needs to be re-implemented as we no longer pass content as string to detail methods
 	return ``
 }
 
