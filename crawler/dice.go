@@ -23,20 +23,29 @@ func (i *Dice) getSalaryRange(content string ) []string {
 */
 
 func (dice *Dice) Crawl() {
-	url := dice.Url + `?text=php`
+	url := dice.Url + `?text=laserfiche`
 	fmt.Println(`URL: ` + url)
 
 	rs := dice.fetchSearchResults(url)
 
+	if (rs[`lastDocument`].(float64) <= 0) {
+		fmt.Println(`No jobs found`)
+		return
+	}
+
 	// @todo: use the nextUrl to fetch the next set of results for the query 
 	detailUrl := ``
-	nextUrl := rs[`nextUrl`].(string)
-	for nextUrl != `` {
+	nextUrl := ``
+	for rs[`resultItemList`] != nil {
 		items := rs[`resultItemList`].([]interface{})
 		for _,item := range items {
 			obj := item.(map[string]interface{})
 			detailUrl = obj[`detailUrl`].(string)
 			dice.getDetails(detailUrl)
+		}
+
+		if rs[`nextUrl`] == nil {
+			break;
 		}
 
 		nextUrl = rs[`nextUrl`].(string)
