@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"github.com/PuerkitoBio/goquery"
 	"log"
+//	"github.com/moazzamk/moz-tech/arrays"
 )
 
 type Dice struct {
@@ -23,9 +24,10 @@ func (i *Dice) getSalaryRange(content string ) []string {
 */
 
 func (dice *Dice) Crawl() {
-	url := dice.Url + `?text=laserfiche`
+	url := dice.Url + `?text=php`
 	fmt.Println(`URL: ` + url)
 
+	ret := make(map[string]int)
 	rs := dice.fetchSearchResults(url)
 
 	if (rs[`lastDocument`].(float64) <= 0) {
@@ -33,7 +35,6 @@ func (dice *Dice) Crawl() {
 		return
 	}
 
-	// @todo: use the nextUrl to fetch the next set of results for the query 
 	detailUrl := ``
 	nextUrl := ``
 	for rs[`resultItemList`] != nil {
@@ -41,17 +42,127 @@ func (dice *Dice) Crawl() {
 		for _,item := range items {
 			obj := item.(map[string]interface{})
 			detailUrl = obj[`detailUrl`].(string)
-			dice.getDetails(detailUrl)
+
+			skills := dice.getDetails(detailUrl)
+			for i := 0; i < len(skills); i++ {
+				tmp := strings.ToLower(skills[i])
+				if _, ok := ret[tmp]; ok {
+					ret[tmp]++;
+				} else {
+					ret[tmp] = 1
+				}
+			}
+
 		}
+
+		fmt.Println(ret)
+
 
 		if rs[`nextUrl`] == nil {
 			break;
 		}
 
+		fmt.Println(ret)
+
 		nextUrl = rs[`nextUrl`].(string)
 		rs = dice.fetchSearchResults(`http://service.dice.com` + nextUrl)
 	}
 }
+
+func (dice *Dice) processJobSkill(skills []string) []string {
+	ret := skills
+/*
+	syn := map[string][]string {
+		`mongo`: []string{
+			`mongodb`,
+		},
+		`redhat`: []string {
+			`red hat`,
+
+		},
+		`javascript`: []string {
+			`java script`,
+			`js`,
+		},
+		`angular`: []string {
+			`angularjs`,
+		},
+	}
+
+*/
+	skillies := []string {
+		`codeigniter`,
+		`laravel`,
+		`zend`,
+		`symfony`,
+		`mvc`,
+		`yii`,
+
+		`python`,
+		`ruby`,
+		`mysql`,
+		`postgresql`,
+
+		`git`,
+
+		`angular`,
+		`json`,
+		`javascript`,
+		`jquery`,
+		`rest`,
+
+
+		`scrum`,
+		`ajax`,
+		`xml`,
+		`css3`,
+		`css`,
+
+		`drupal`,
+		`wordpress`,
+		`joomla`,
+
+
+		`agile`,
+		`ruby`,
+		`soap`,
+
+		`lamp`,
+	}
+
+	// In compound skills, if we find a skill we know of, we add it to the list
+
+	tmp := ``
+	for i := 0; i < len(skillies); i++ {
+		for j := 0; j < len(skills); j++ {
+			tmp = strings.Trim(skills[j], ` `)
+			if strings.Contains(tmp, ` `) && strings.Contains(tmp, skillies[i]) {
+				ret = append(ret, skillies[i])
+			}
+		}
+	}
+
+	return ret
+}
+
+/*
+func (dice *Dice) processJobSkill(skills []string) []string {
+	var ret []string
+
+	ignoreSkills := []string{
+		`software development`,
+		`development`,
+	}
+
+	for i := 0; i < len(skills); i++ {
+		if exists := !arrays.InArray(ignoreSkills, skills[i]); exists {
+			append(ret, skills[i])
+		}
+	}
+
+	return ret
+}
+*/
 
 func (dice *Dice) fetchSearchResults(url string) map[string]interface{} {
 	var response map[string]interface{}
@@ -76,14 +187,14 @@ func (dice *Dice) fetchSearchResults(url string) map[string]interface{} {
 	return response
 }
 
-func (dice *Dice) getDetails(url string) {
+func (dice *Dice) getDetails(url string) []string {
 	doc, err := goquery.NewDocument(url)
 	if err != nil {
 		log.Fatal(err)
 		fmt.Println(err, "ERRRR")
 	}
 
-	fmt.Println(dice.getJobSkill(doc))
+	return dice.getJobSkill(doc)
 }
 
 func (dice *Dice) getTelecommuteAndTravel(content string) (int, int) {
@@ -126,5 +237,5 @@ func (dice *Dice) getJobSkill(doc *goquery.Document) []string {
 		sss = s.Text();
 	})
 
-	return strings.Split(sss, `,`)
+	return dice.processJobSkill(strings.Split(sss, `,`))
 }
