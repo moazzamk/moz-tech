@@ -42,18 +42,26 @@ type SalaryRange struct {
 	originalSalary string
 }
 
+type JobDetail struct {
+	salary *SalaryRange
+	employer string
+	location string
+	skills []string
+}
+
 func (dice *Dice) Crawl() {
 	url := dice.Url
 	fmt.Println(`URL: ` + url)
 
 	ret := make(map[string]int)
- 	rs := dice.fetchSearchResults(url)
-	fmt.Println(`search results came back`)
+	rs := dice.fetchSearchResults(url)
+	fmt.Println(`search results came back with `, rs["count"].(float64), " results")
 
 	if rs[`lastDocument`].(float64) <= 0 {
 		fmt.Println(`No jobs found`)
 		return
 	}
+
 
 	detailUrl := ``
 	nextUrl := ``
@@ -67,10 +75,11 @@ func (dice *Dice) Crawl() {
 
 			go func (myUrl string) {
 				fmt.Println(`details start for` + myUrl)
-				skills := dice.getDetails(myUrl)
+				jobDetails := dice.getDetails(myUrl)
 				fmt.Println(`details came back for` + myUrl)
-				for i := 0; i < len(skills); i++ {
-					tmp := strings.ToLower(skills[i])
+				fmt.Println(`Locations`, jobDetails.location)
+				for i := 0; i < len(jobDetails.skills); i++ {
+					tmp := strings.ToLower(jobDetails.skills[i])
 
 					skillMutex.Lock()
 					if _, ok := ret[tmp]; ok {
@@ -274,7 +283,7 @@ func (dice *Dice) fetchSearchResults(url string) map[string]interface{} {
 	return response
 }
 
-func (dice *Dice) getDetails(url string) []string {
+func (dice *Dice) getDetails(url string) JobDetail {
 	doc, err := goquery.NewDocument(url)
 	if err != nil {
 		log.Fatal(err)
@@ -296,16 +305,39 @@ func (dice *Dice) getDetails(url string) []string {
 		largestLink = url
 	}
 
+	var ret JobDetail
+	ret.skills = dice.getJobSkill(doc)
+	ret.salary = salaryRange
+	ret.employer = dice.getEmployer(doc)
+	ret.location = dice.getLocation(doc)
 
-	return dice.getJobSkill(doc)
+	return ret
+}
+
+func (dice *Dice) getLocation(doc *goquery.Document) string {
+	var ret string
+	doc.Find(`.location`).Each(func (i int, s *goquery.Selection) {
+		ret = s.Text()
+
+		fmt.Println(`Locataion was`, ret)
+	})
+
+	return ret
+}
+
+func (dice *Dice) getEmployer(doc *goquery.Document) string {
+	var ret string
+	doc.Find(`.employer .dice-btn-link`).Each(func (i int, s *goquery.Selection) {
+		ret = s.Text()
+	})
+
+	return ret
 }
 
 /*
 Get salary from the job posting and translate it to yearly salary
 if the salary isnt already yearly
-
-
- */
+*/
 func (dice *Dice) getSalaryRange(doc *goquery.Document) (*SalaryRange) {
 	ret := new(SalaryRange)
 	doc.Find(`.icon-bank-note`).Each(func (i int, s *goquery.Selection) {

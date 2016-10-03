@@ -38,7 +38,7 @@ func main() {
 	}
 
 	diceCrawler := new(crawler.Dice)
-	diceCrawler.Url = `http://service.dice.com/api/rest/jobsearch/v1/simple.json?pgcnt=500&text=wordpress&state=TX`
+	diceCrawler.Url = `http://service.dice.com/api/rest/jobsearch/v1/simple.json?pgcnt=500&text=laravel&state=TX`
 	diceCrawler.Search = &client
 	diceCrawler.Crawl()
 
