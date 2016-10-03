@@ -1,4 +1,4 @@
-package crawler;
+package crawler
 
 import (
 	"fmt"
@@ -24,8 +24,7 @@ func (i *LinkedIn) Crawl() {
 
 	defer resp.Body.Close()
 
-
 	body, _ := ioutil.ReadAll(resp.Body)
 
-	fmt.Println("response" , string(body))
+	fmt.Println("response", string(body))
 }

@@ -1,36 +1,56 @@
 package crawler
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/PuerkitoBio/goquery"
+	"gopkg.in/olivere/elastic.v3"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"regexp"
 	"strings"
-	"net/http"
-	"io/ioutil"
-	"encoding/json"
-	"github.com/PuerkitoBio/goquery"
-	"log"
-//	"github.com/moazzamk/moz-tech/arrays"
+	//	"github.com/moazzamk/moz-tech/arrays"
+	"sort"
+	"github.com/moazzamk/moz-tech/service"
+	"sync"
+	"strconv"
 )
 
+var wg sync.WaitGroup
+var mutex sync.Mutex
+var skillMutex sync.Mutex
+var largestSalary float64
+var largestLink string
+
 type Dice struct {
-	Url string
+	Url    string
 	Skills []string
+	Search **elastic.Client
 }
 
-/*
-func (i *Dice) getSalaryRange(content string ) []string {
-	return new ([2]string)
+type SalaryRange struct {
+	calculatedMinYearlySalary float64
+	minSalary float64
+
+	calculatedMaxYearlySalary float64
+	maxSalary float64
+
+	calculatedSalary float64
+	salary float64
+
+	originalSalary string
 }
-*/
 
 func (dice *Dice) Crawl() {
-	url := dice.Url + `?text=php`
+	url := dice.Url
 	fmt.Println(`URL: ` + url)
 
 	ret := make(map[string]int)
-	rs := dice.fetchSearchResults(url)
+ 	rs := dice.fetchSearchResults(url)
+	fmt.Println(`search results came back`)
 
-	if (rs[`lastDocument`].(float64) <= 0) {
+	if rs[`lastDocument`].(float64) <= 0 {
 		fmt.Println(`No jobs found`)
 		return
 	}
@@ -39,136 +59,204 @@ func (dice *Dice) Crawl() {
 	nextUrl := ``
 	for rs[`resultItemList`] != nil {
 		items := rs[`resultItemList`].([]interface{})
-		for _,item := range items {
+		wg.Add(len(items))
+		for _, item := range items {
 			obj := item.(map[string]interface{})
 			detailUrl = obj[`detailUrl`].(string)
 
-			skills := dice.getDetails(detailUrl)
-			for i := 0; i < len(skills); i++ {
-				tmp := strings.ToLower(skills[i])
-				if _, ok := ret[tmp]; ok {
-					ret[tmp]++;
-				} else {
-					ret[tmp] = 1
-				}
-			}
 
+			go func (myUrl string) {
+				fmt.Println(`details start for` + myUrl)
+				skills := dice.getDetails(myUrl)
+				fmt.Println(`details came back for` + myUrl)
+				for i := 0; i < len(skills); i++ {
+					tmp := strings.ToLower(skills[i])
+
+					skillMutex.Lock()
+					if _, ok := ret[tmp]; ok {
+						ret[tmp]++
+					} else {
+						ret[tmp] = 1
+					}
+					skillMutex.Unlock()
+				}
+				wg.Done()
+			}(detailUrl)
 		}
 
-		fmt.Println(ret)
+		wg.Wait()
 
+		fmt.Println("Largest salary", largestSalary, " ", largestLink)
+
+		sortedKeys := SortedKeys(ret)
+		for _, k := range sortedKeys {
+			fmt.Println(k, ret[k])
+		}
 
 		if rs[`nextUrl`] == nil {
-			break;
+			break
 		}
-
-		fmt.Println(ret)
 
 		nextUrl = rs[`nextUrl`].(string)
 		rs = dice.fetchSearchResults(`http://service.dice.com` + nextUrl)
+		fmt.Println(`search results came back`)
 	}
 }
+
+
+
 
 func (dice *Dice) processJobSkill(skills []string) []string {
 	ret := skills
-/*
-	syn := map[string][]string {
+
+	syn := map[string][]string{
 		`mongo`: []string{
 			`mongodb`,
+			`mongo db`,
 		},
-		`redhat`: []string {
+		`redhat`: []string{
 			`red hat`,
-
 		},
-		`javascript`: []string {
+		`javascript`: []string{
 			`java script`,
-			`js`,
 		},
-		`angular`: []string {
+		`angular`: []string{
 			`angularjs`,
+			`angular.js`,
+			`angular js`,
 		},
+		`ember`: []string{
+			`ember.js`,
+			`emberjs`,
+		},
+		`mysql`: []string{
+			`my sql`,
+		},
+		`mssql`: []string{
+			`sql server`,
+			`ms server`,
+		},
+		`aws`: []string {
+			`amazon web services`,
+		},
+		`java`: []string{
+			`corejava`,
+			`core java`,
+			`java8`,
+		},
+		`nodejs`: []string{
+			`node js`,
+			`node.js`,
+		},
+		`bootstrap`: []string{
+			`boot strap`,
+		},
+		`bigdata`: []string{
+			`big data`,
+		},
+		`elasticsearch`: []string{
+			`elastic search`,
+		},
+		`machine_learning`: []string{
+			`machine learning`,
+		},
+		`cognitive_computing`: []string{
+			`cognitive computing`,
+		},
+		`cloud_computing`: []string{
+			`cloud computing`,
+		},
+		`data_warehouse`: []string{
+			`data warehouse design`,
+			`data warehouse`,
+			`data warehousing`,
+
+		},
+		`automated_testing`: []string{
+			`automation test`,
+		},
+		`data_mining`: []string{
+			`data mining`,
+		},
+
+		`predictive_analytics`: []string{
+			`predictive analytics`,
+		},
+		`version_control`: []string{
+			`version control`,
+			`vcs`,
+		},
+		`business_intelligence`: []string{
+			`business_intelligence`,
+			` bi `,
+			`bi `,
+		},
+		`azure`: []string{
+			`ms azure`,
+		},
+		`business_analysis`: []string{
+			`business analysis`,
+			`business analyst`,
+		},
+		`data_science`: []string{
+			`data science`,
+			`data scientist`,
+		},
+
 	}
 
-*/
-	skillies := []string {
-		`codeigniter`,
-		`laravel`,
-		`zend`,
-		`symfony`,
-		`mvc`,
-		`yii`,
+	for index := range skills {
 
-		`python`,
-		`ruby`,
-		`mysql`,
-		`postgresql`,
+		tmp := strings.ToLower(strings.Trim(skills[index], ` `))
 
-		`git`,
-
-		`angular`,
-		`json`,
-		`javascript`,
-		`jquery`,
-		`rest`,
-
-
-		`scrum`,
-		`ajax`,
-		`xml`,
-		`css3`,
-		`css`,
-
-		`drupal`,
-		`wordpress`,
-		`joomla`,
-
-
-		`agile`,
-		`ruby`,
-		`soap`,
-
-		`lamp`,
-	}
-
-	// In compound skills, if we find a skill we know of, we add it to the list
-
-	tmp := ``
-	for i := 0; i < len(skillies); i++ {
-		for j := 0; j < len(skills); j++ {
-			tmp = strings.Trim(skills[j], ` `)
-			if strings.Contains(tmp, ` `) && strings.Contains(tmp, skillies[i]) {
-				ret = append(ret, skillies[i])
+		// Correct all spellings, etc of the skill and normalize synonyms to 1 name
+		for key, values := range syn {
+			for i := range values {
+				tmp = strings.Replace(tmp, values[i], key, -1)
 			}
 		}
-	}
 
-	return ret
-}
+		ret[index] = tmp
 
-/*
-func (dice *Dice) processJobSkill(skills []string) []string {
-	var ret []string
+		//fmt.Println(`======`, tmp)
 
-	ignoreSkills := []string{
-		`software development`,
-		`development`,
-	}
+		// If skill is more than 1 word, then check if it has multiple skills listed
+		tmpSlice := strings.Split(tmp, ` `)
+		tmpSliceLen := len(tmpSlice)
+		for i := 0; i < tmpSliceLen && tmpSliceLen > 0; i++ {
+			mutex.Lock()
+			searchHasSkill := service.SearchHasSkill(dice.Search, tmpSlice[i])
+			mutex.Unlock()
+			if  searchHasSkill {
+				ret = append(ret, tmpSlice[i])
+			}
+		}
 
-	for i := 0; i < len(skills); i++ {
-		if exists := !arrays.InArray(ignoreSkills, skills[i]); exists {
-			append(ret, skills[i])
+		// If the skill is one word and not present in our storage then add it
+
+		mutex.Lock()
+		searchHasSkill := service.SearchHasSkill(dice.Search, tmp)
+		mutex.Unlock()
+
+		if tmpSliceLen == 1 && ! searchHasSkill {
+			_, err := service.SearchAddSkill(dice.Search, tmp)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println(`Added skill ` + tmp)
 		}
 	}
 
+//	fmt.Println(`====================`, ret)
+
 	return ret
 }
-*/
 
 func (dice *Dice) fetchSearchResults(url string) map[string]interface{} {
 	var response map[string]interface{}
 
 	resp, err := http.Get(url)
-	if (err != nil) {
+	if err != nil {
 		fmt.Println(err)
 		return nil
 	}
@@ -176,7 +264,6 @@ func (dice *Dice) fetchSearchResults(url string) map[string]interface{} {
 	defer resp.Body.Close()
 
 	body, _ := ioutil.ReadAll(resp.Body)
-
 
 	err = json.Unmarshal(body, &response)
 	if err != nil {
@@ -194,7 +281,79 @@ func (dice *Dice) getDetails(url string) []string {
 		fmt.Println(err, "ERRRR")
 	}
 
+
+	salaryRange := dice.getSalaryRange(doc)
+	if (salaryRange.maxSalary > largestSalary) {
+		largestSalary = salaryRange.maxSalary
+		largestLink = url
+	}
+	if (salaryRange.calculatedMaxYearlySalary > largestSalary) {
+		largestSalary = salaryRange.calculatedMaxYearlySalary
+		largestLink = url
+	}
+	if (salaryRange.salary > largestSalary) {
+		largestSalary = salaryRange.salary
+		largestLink = url
+	}
+
+
 	return dice.getJobSkill(doc)
+}
+
+/*
+Get salary from the job posting and translate it to yearly salary
+if the salary isnt already yearly
+
+
+ */
+func (dice *Dice) getSalaryRange(doc *goquery.Document) (*SalaryRange) {
+	ret := new(SalaryRange)
+	doc.Find(`.icon-bank-note`).Each(func (i int, s *goquery.Selection) {
+
+		str := s.Parent().Siblings().Text()
+		re := regexp.MustCompile(`[$0-9,.kK]+\s*(-|to)*\s*[$0-9,.kK]+`)
+		charsToReplace := map[string]string{
+			`k`: `000`,
+			`K`: `000`,
+			`,`: ``,
+			`$`: ``,
+			`to`: `-`,
+			` `: ``,
+		}
+
+
+		ret.originalSalary = str
+		tmp := re.FindString(str)
+
+		if tmp == `` {
+			fmt.Println(str, " was empty")
+			return
+		}
+
+		for j, v := range charsToReplace {
+			tmp = strings.Replace(tmp, j, v, -1)
+		}
+
+		rangeArray := strings.Split(tmp, `-`)
+		rangeArrayLen := len(rangeArray)
+		if rangeArrayLen == 2 {
+			ret.minSalary, _ = strconv.ParseFloat(rangeArray[0], 64)
+			ret.maxSalary, _ = strconv.ParseFloat(rangeArray[1], 64)
+		} else if rangeArrayLen == 1 { // Salary is not a range
+			ret.salary, _ = strconv.ParseFloat(rangeArray[0], 64)
+		}
+
+		// Calculate yearly salary if its an hourly position
+		if (strings.Contains(str, `hr`) || strings.Contains(str, `hour`)) {
+			ret.calculatedMinYearlySalary = ret.minSalary * 40 * 52
+			ret.calculatedMaxYearlySalary = ret.maxSalary * 40 * 52
+			ret.calculatedSalary = ret.salary * 40 * 52
+		}
+
+		return
+	})
+
+	return ret
 }
 
 func (dice *Dice) getTelecommuteAndTravel(content string) (int, int) {
@@ -231,11 +390,43 @@ func (dice *Dice) getJobType(doc *goquery.Document) string {
 }
 
 func (dice *Dice) getJobSkill(doc *goquery.Document) []string {
-	var sss string;
+	var sss string
 
-	doc.Find(`#labelskill`).Each(func (i int, s *goquery.Selection) {
-		sss = s.Text();
+	doc.Find(`#labelskill`).Each(func(i int, s *goquery.Selection) {
+		sss = s.Text()
 	})
 
 	return dice.processJobSkill(strings.Split(sss, `,`))
+}
+
+type SortedMap struct {
+	m map[string]int
+	s []string
+}
+
+func (sm *SortedMap) Len() int {
+	return len(sm.m)
+}
+
+func (sm *SortedMap) Less(i, j int) bool {
+	return sm.m[sm.s[i]] > sm.m[sm.s[j]]
+}
+
+func (sm *SortedMap) Swap(i, j int) {
+	sm.s[i], sm.s[j] = sm.s[j], sm.s[i]
+}
+
+func SortedKeys(m map[string]int) []string {
+	sm := new(SortedMap)
+	sm.m = m
+	sm.s = make([]string, len(m))
+
+	i := 0
+	for key, _ := range m {
+		sm.s[i] = key
+		i++
+	}
+
+	sort.Sort(sm)
+	return sm.s
 }
