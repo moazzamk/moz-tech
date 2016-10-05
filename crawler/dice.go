@@ -15,6 +15,7 @@ import (
 	"github.com/moazzamk/moz-tech/service"
 	"sync"
 	"strconv"
+	"time"
 )
 
 var wg sync.WaitGroup
@@ -388,6 +389,16 @@ func (dice *Dice) getSalaryRange(doc *goquery.Document) (*SalaryRange) {
 	return ret
 }
 
+func (dice *Dice) getJobTitle(doc *goquery.Document) string {
+	var title string
+
+	doc.Find(`#jt`).Each(func (i int, s *goquery.Selection) {
+		title = s.Text()
+	})
+
+	return title
+}
+
 func (dice *Dice) getTelecommuteAndTravel(content string) (int, int) {
 	// This method needs to be re-implemented as we no longer pass content as string to detail methods
 	telecommute := 0
@@ -403,17 +414,37 @@ func (dice *Dice) getTelecommuteAndTravel(content string) (int, int) {
 	return telecommute, travel
 }
 
-func (dice *Dice) getPostedDate(content string) string {
-	// This method needs to be re-implemented as we no longer pass content as string to detail methods
+func (dice *Dice) getPostedDate(doc *goquery.Document) string {
+	var ret string
 
-	// @todo : process jobs posted hours ago not weeks ago
+	doc.Find(`.posted`).Each(func (i int, s *goquery.Selection) {
+		ret = s.Text()
 
-	re := regexp.MustCompile(`Posted Date: </b>[^<]+`)
-	date := re.FindString(content)
-	date = strings.Replace(date, `Posted Date: </b>`, ``, -1)
-	date = strings.Trim(date, ` `)
+		if strings.Contains(ret, `ago`) {
+			re := regexp.MustCompile(`[0-9]+`)
+			duration := re.FindString(ret)
+			sub, err := strconv.ParseInt(duration, 10, 64)
+			if err != nil {
+				return `Error parsing date`
+			}
 
-	return date
+			if strings.Contains(ret, `day`) {
+				sub = sub * 24 * 60 * 60 * 60
+				ts := time.Now().Unix()
+				ts -= sub
+				ts = time.Unix(ts, 0)
+
+			} else {
+
+				sub = sub * time.Hour * 60 * 60 * 60 *
+
+			}
+		}
+
+
+	})
+
+	return ret
 }
 
 func (dice *Dice) getJobType(doc *goquery.Document) string {
