@@ -1,0 +1,7 @@
+Things that need to be done :
+===============================
+- Write a crawler for stack overflow
+- Write a web/cli way to add known skills to ES
+- Parse the body of job dice job descriptions for known skills
+- Create routines/functions that can be used to communicate with ES
+- Write a front end for running searches?
