@@ -43,7 +43,6 @@ func main() {
 	diceCrawler.Crawl()
 
 
-
 	/*
 	linkedInCrawler := new (crawler.LinkedIn)
 	linkedInCrawler.Crawl()

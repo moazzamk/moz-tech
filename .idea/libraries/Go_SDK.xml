@@ -1,7 +1,7 @@
 <component name="libraryTable">
   <library name="Go SDK">
     <CLASSES>
-      <root url="file:///opt/local/lib/go/src" />
+      <root url="file:///usr/local/Cellar/go/1.7.1/libexec/src" />
     </CLASSES>
     <SOURCES />
   </library>

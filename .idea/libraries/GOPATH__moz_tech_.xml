@@ -1,54 +1,13 @@
 <component name="libraryTable">
   <library name="GOPATH &lt;moz-tech&gt;">
     <CLASSES>
-      <root url="file:///opt/local/lib/go/src/flag" />
-      <root url="file:///opt/local/lib/go/src/log" />
-      <root url="file:///opt/local/lib/go/src/internal" />
-      <root url="file://$PROJECT_DIR$/../.." />
-      <root url="file:///opt/local/lib/go/src/expvar" />
-      <root url="file:///opt/local/lib/go/src/database" />
-      <root url="file:///opt/local/lib/go/src/strings" />
-      <root url="file:///opt/local/lib/go/src/unsafe" />
       <root url="file://$PROJECT_DIR$/../../../gopkg.in" />
-      <root url="file:///opt/local/lib/go/src/vendor" />
-      <root url="file:///opt/local/lib/go/src/os" />
-      <root url="file:///opt/local/lib/go/src/debug" />
-      <root url="file:///opt/local/lib/go/src/runtime" />
-      <root url="file:///opt/local/lib/go/src/builtin" />
-      <root url="file:///opt/local/lib/go/src/go" />
-      <root url="file:///opt/local/lib/go/src/bytes" />
-      <root url="file:///opt/local/lib/go/src/time" />
-      <root url="file:///opt/local/lib/go/src/mime" />
-      <root url="file:///opt/local/lib/go/src/container" />
-      <root url="file:///opt/local/lib/go/src/reflect" />
-      <root url="file:///opt/local/lib/go/src/context" />
-      <root url="file:///opt/local/lib/go/src/fmt" />
-      <root url="file:///opt/local/lib/go/src/path" />
-      <root url="file:///opt/local/lib/go/src/net" />
-      <root url="file:///opt/local/lib/go/src/html" />
-      <root url="file:///opt/local/lib/go/src/text" />
-      <root url="file:///opt/local/lib/go/src/compress" />
-      <root url="file:///opt/local/lib/go/src/io" />
-      <root url="file:///opt/local/lib/go/src/image" />
-      <root url="file:///opt/local/lib/go/src/archive" />
-      <root url="file://$PROJECT_DIR$/../../../golang.org" />
-      <root url="file:///opt/local/lib/go/src/sort" />
-      <root url="file:///opt/local/lib/go/src/testing" />
-      <root url="file:///opt/local/lib/go/src/index" />
-      <root url="file:///opt/local/lib/go/src/crypto" />
-      <root url="file:///opt/local/lib/go/src/encoding" />
-      <root url="file:///opt/local/lib/go/src/sync" />
-      <root url="file:///opt/local/lib/go/src/unicode" />
-      <root url="file:///opt/local/lib/go/src/cmd" />
-      <root url="file:///opt/local/lib/go/src/strconv" />
-      <root url="file:///opt/local/lib/go/src/errors" />
-      <root url="file:///opt/local/lib/go/src/math" />
-      <root url="file:///opt/local/lib/go/src/syscall" />
-      <root url="file:///opt/local/lib/go/src/bufio" />
-      <root url="file:///opt/local/lib/go/src/hash" />
-      <root url="file:///opt/local/lib/go/src/regexp" />
+      <root url="file://$PROJECT_DIR$/../.." />
     </CLASSES>
-    <SOURCES />
+    <SOURCES>
+      <root url="file://$PROJECT_DIR$/../../../gopkg.in" />
+      <root url="file://$PROJECT_DIR$/../.." />
+    </SOURCES>
     <excluded>
       <root url="file://$PROJECT_DIR$" />
     </excluded>

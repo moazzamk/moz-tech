@@ -3,11 +3,15 @@ package service
 import (
 	"gopkg.in/olivere/elastic.v3"
 	"strings"
+	"sync"
 )
 
-func SearchHasSkill(client **elastic.Client, skill string) bool {
+var esMutex sync.Mutex
 
+func SearchHasSkill(client **elastic.Client, skill string) bool {
 	searchClient := *client
+
+	esMutex.Lock()
 	searchQuery := elastic.NewTermQuery(`skill`, skill)
 	searchResult, err := searchClient.Search().
 		Index(`jobs`).
@@ -15,6 +19,8 @@ func SearchHasSkill(client **elastic.Client, skill string) bool {
 		Query(searchQuery).
 		Pretty(true).
 		Do()
+
+	esMutex.Unlock()
 
 	if err != nil {
 		panic(err)
@@ -31,12 +37,15 @@ func SearchHasSkill(client **elastic.Client, skill string) bool {
 func SearchAddSkill(client **elastic.Client, skill string) (bool, error) {
 	//return true, nil
 	searchClient := *client
+
+	esMutex.Lock()
 	_, err := searchClient.Index().
 		Index(`jobs`).
 		Type(`skills`).
 		BodyString(`{"skill":"` + strings.Replace(skill, `"`, `\"`, -1) + `"}`).
 		Refresh(true).
 		Do()
+	esMutex.Unlock()
 
 	if err != nil {
 		return false, err
