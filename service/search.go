@@ -7,31 +7,38 @@ import (
 )
 
 var esMutex sync.Mutex
+var hasSkill = make(map[string]bool)
 
 func SearchHasSkill(client **elastic.Client, skill string) bool {
 	searchClient := *client
 
-	esMutex.Lock()
-	searchQuery := elastic.NewTermQuery(`skill`, skill)
-	searchResult, err := searchClient.Search().
-		Index(`jobs`).
-		Type(`skills`).
-		Query(searchQuery).
-		Pretty(true).
-		Do()
+	ret, err := hasSkill[skill]
+	if err == false {
+		esMutex.Lock()
+		searchQuery := elastic.NewTermQuery(`skill`, skill)
+		searchResult, err := searchClient.Search().
+			Index(`jobs`).
+			Type(`skills`).
+			Query(searchQuery).
+			Pretty(true).
+			Do()
 
-	esMutex.Unlock()
+		esMutex.Unlock()
 
-	if err != nil {
-		panic(err)
+		if err != nil {
+			panic(err)
+		}
+
+		if searchResult.Hits.TotalHits > 0 {
+			hasSkill[skill] = true
+		} else {
+			hasSkill[skill] = false
+		}
+
+		ret = hasSkill[skill]
 	}
 
-	//fmt.Println(searchResult.Hits.TotalHits , " RESULTS FOUND FOR " + skill)
-	if searchResult.Hits.TotalHits > 0 {
-		return true
-	}
-
-	return false
+	return ret
 }
 
 func SearchAddSkill(client **elastic.Client, skill string) (bool, error) {
