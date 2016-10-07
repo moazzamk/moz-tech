@@ -310,7 +310,11 @@ func (dice *Dice) getJobSkill(doc *goquery.Document) []string {
 		sss = s.Text()
 	})
 
-	skills := dice.processJobSkill(strings.Split(sss, `,`))
+	uniqueSlice := structures.NewUniqueSlice(strings.Split(sss, `,`))
+
+	fmt.Println("SL", uniqueSlice, sss)
+
+	skills := dice.processJobSkill(uniqueSlice)
 
 	// Extract skills from description
 	description := dice.getJobDescription(doc)
@@ -341,14 +345,13 @@ func (dice *Dice) stopWord(subject string) {
 
 }
 
-func (dice *Dice) processJobSkill(skills structures.UniqueSlice) structures.UniqueSlice {
-	ret := new(structures.UniqueSlice)
+func (dice *Dice) processJobSkill(skills *structures.UniqueSlice) *structures.UniqueSlice {
+	ret := skills
 
-	for index := range skills.ToSlice () {
-		tmp := strings.ToLower(strings.Trim(skills[index], ` `))
-
+	for index, value := range skills.ToSlice () {
+		tmp := strings.ToLower(strings.Trim(value, ` `))
 		tmp = dice.getNormalizedSkillSynonym(tmp)
-		ret[index] = tmp
+		ret.Set(index, tmp)
 
 		// If skill is more than 1 word, then check if it has multiple skills listed
 		tmpSlice := strings.Split(tmp, ` `)
@@ -356,7 +359,7 @@ func (dice *Dice) processJobSkill(skills structures.UniqueSlice) structures.Uniq
 		for i := range tmpSlice {
 			searchHasSkill := service.SearchHasSkill(dice.Search, tmpSlice[i])
 			if  searchHasSkill {
-				ret = append(ret, tmpSlice[i])
+				ret.Append(tmpSlice[i])
 			}
 		}
 
@@ -372,7 +375,6 @@ func (dice *Dice) processJobSkill(skills structures.UniqueSlice) structures.Uniq
 			fmt.Println(`Added skill ` + tmp)
 		}
 	}
-
 
 	return ret
 }
