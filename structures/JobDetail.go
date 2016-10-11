@@ -8,7 +8,9 @@ type JobDetail struct {
 	Location string
 	Skills []string
 	JobType string
+	Title string
 	Link string
+
 
 	Telecommute int
 	Travel int

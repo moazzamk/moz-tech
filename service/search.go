@@ -4,6 +4,7 @@ import (
 	"gopkg.in/olivere/elastic.v3"
 	"strings"
 	"sync"
+	"github.com/moazzamk/moz-tech/structures"
 )
 
 var esMutex sync.Mutex
@@ -59,4 +60,23 @@ func SearchAddSkill(client **elastic.Client, skill string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func SearchAddJob(client **elastic.Client, job structures.JobDetail) {
+	searchClient := *client
+
+	esMutex.Lock()
+	_, err := searchClient.
+						Index().
+						Index("jobs").
+						Type("job").
+						Id(job.Link).
+						BodyJson(job).
+						Refresh(true).
+						Do()
+	esMutex.Unlock()
+
+	if err != nil {
+		panic(err)
+	}
 }
