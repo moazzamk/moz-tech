@@ -5,6 +5,8 @@ import (
 	"strings"
 	"sync"
 	"github.com/moazzamk/moz-tech/structures"
+	"crypto/md5"
+	"encoding/hex"
 )
 
 var esMutex sync.Mutex
@@ -45,7 +47,6 @@ func SearchHasSkill(client **elastic.Client, skill string) bool {
 func SearchAddSkill(client **elastic.Client, skill string) (bool, error) {
 	//return true, nil
 	searchClient := *client
-
 	esMutex.Lock()
 	_, err := searchClient.Index().
 		Index(`jobs`).
@@ -65,12 +66,16 @@ func SearchAddSkill(client **elastic.Client, skill string) (bool, error) {
 func SearchAddJob(client **elastic.Client, job structures.JobDetail) {
 	searchClient := *client
 
+	hasher := md5.New()
+	hasher.Write([]byte(job.Link))
+	md5hash := hex.EncodeToString(hasher.Sum(nil))
+
 	esMutex.Lock()
 	_, err := searchClient.
 						Index().
 						Index("jobs").
 						Type("job").
-						Id(job.Link).
+						Id(md5hash).
 						BodyJson(job).
 						Refresh(true).
 						Do()

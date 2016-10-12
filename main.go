@@ -43,50 +43,68 @@ func main() {
 
 	fmt.Println("Initialized")
 
-	searchWriteChannel := make(chan structures.JobDetail)
+	jobDetailWriter := make(chan structures.JobDetail)
 
 	go func (chan structures.JobDetail) {
-		for i := range searchWriteChannel {
+		for i := range jobDetailWriter {
 			service.SearchAddJob(&client, i)
 		}
-	}(searchWriteChannel)
+	}(jobDetailWriter)
 
 	var doneChannels []chan bool
-	doneChannels = append(doneChannels, startRemoteWork(&client))
+	doneChannels = append(doneChannels, startRemoteWork(&client, jobDetailWriter))
 
 	for i := range doneChannels {
 		_ = <- doneChannels[i]
 	}
-
-	/*
-	diceCrawler := new(crawler.Dice)
-	diceCrawler.Url = `http://service.dice.com/api/rest/jobsearch/v1/simple.json?pgcnt=500&text=phalcon&state=TX`
-	diceCrawler.Search = &client
-	diceCrawler.Crawl()
-	*/
-
-
-
-
-	/*
-	linkedInCrawler := new (crawler.LinkedIn)
-	linkedInCrawler.Crawl()
-	*/
 }
 
-func startRemoteWork(client **elastic.Client) chan bool {
+func startDice(client **elastic.Client, JobDetailWriter chan structures.JobDetail) chan bool {
 	var doneChannel = make(chan bool)
 
 	go func (doneChannel chan bool) {
+		diceCrawler := new(crawler.Dice)
+		diceCrawler.Url = `http://service.dice.com/api/rest/jobsearch/v1/simple.json?pgcnt=500&text=phalcon&state=TX`
+		diceCrawler.Search = client
+		diceCrawler.Crawl()
+
+		close (doneChannel)
+	}(doneChannel)
+
+	return doneChannel
+}
+/*
+func startStackOverflow(client **elastic.Client, JobDetailWriter chan structures.JobDetail) chan bool {
+	var doneChannel = make(chan bool)
+
+	go func (doneChannel chan bool, jobDetailWriter chan structures.JobDetail) {
+		diceCrawler := new(crawler.StackOverflow)
+		diceCrawler.Url = `http://stackoverflow.com/jobs`
+		diceCrawler.Search = client
+		diceCrawler.JobDetailWriter
+		diceCrawler.Crawl()
+
+		close (doneChannel)
+	}(doneChannel, JobDetailWriter)
+
+	return doneChannel
+}
+*/
+func startRemoteWork(client **elastic.Client, JobDetailWriter chan structures.JobDetail) chan bool {
+	var doneChannel = make(chan bool)
+
+	fmt.Println(`Started remotework.io crawler`)
+	go func (doneChannel chan bool, searchWriteChannnel chan structures.JobDetail) {
 		remoteWorkOkCrawler := new(crawler.RemoteWork)
 		remoteWorkOkCrawler.Url = `https://remoteok.io/index.json`
 		remoteWorkOkCrawler.Host = `https://remoteok.io`
 		remoteWorkOkCrawler.Search = client
+		remoteWorkOkCrawler.SearchWriteChannel = JobDetailWriter
 		remoteWorkOkCrawler.Crawl()
 		doneChannel <- true
 
 		close(doneChannel)
-	}(doneChannel)
+	}(doneChannel, JobDetailWriter)
 
 	return doneChannel
 }

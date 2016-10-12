@@ -7,20 +7,22 @@ import (
 	"fmt"
 	"github.com/moazzamk/moz-tech/structures"
 	"strings"
-	"github.com/moazzamk/moz-tech/service"
 	"net/http"
 	"io/ioutil"
 	"encoding/json"
 )
 
+
+// This is not complete. I realized they have expired jobs and not enough info.
+// so it's probably not worth it to index them
 type RemoteWork struct {
 	Host string
 	Url string
 	Search **elastic.Client
+	SearchWriteChannel chan structures.JobDetail
 }
 
 func (rw *RemoteWork) Crawl() {
-//	var links []string
 	var detailUrl string
 
 	rs := rw.fetchSearchResults(rw.Url)
@@ -68,6 +70,7 @@ func (rw *RemoteWork) getDetails(url string) {
 
 	var jobDetails structures.JobDetail
 	jobDetails.Link = url
+	jobDetails.Source = `remoteok.io`
 	jobDetails.Description = rw.getJobDescription(doc)
 	jobDetails.Employer = rw.getEmployer(doc)
 	jobDetails.JobType = rw.getJobType(doc)
@@ -79,7 +82,7 @@ func (rw *RemoteWork) getDetails(url string) {
 	//jobDetails.Telecommute = rw.getTelecommuteAndTravel(doc)
 	//jobDetails.Travel = rw.getTelecommuteAndTravel(doc)
 
-	service.SearchAddJob(rw.Search, jobDetails)
+	rw.SearchWriteChannel <- jobDetails
 }
 
 func (rw *RemoteWork) getSkills(doc *goquery.Document) []string {
