@@ -79,7 +79,7 @@ func startRemoteWork(client **elastic.Client) chan bool {
 
 	go func (doneChannel chan bool) {
 		remoteWorkOkCrawler := new(crawler.RemoteWork)
-		remoteWorkOkCrawler.Url = `https://remoteok.io/remote-dev-jobs`
+		remoteWorkOkCrawler.Url = `https://remoteok.io/index.json`
 		remoteWorkOkCrawler.Host = `https://remoteok.io`
 		remoteWorkOkCrawler.Search = client
 		remoteWorkOkCrawler.Crawl()

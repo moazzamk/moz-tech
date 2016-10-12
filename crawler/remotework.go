@@ -8,6 +8,9 @@ import (
 	"github.com/moazzamk/moz-tech/structures"
 	"strings"
 	"github.com/moazzamk/moz-tech/service"
+	"net/http"
+	"io/ioutil"
+	"encoding/json"
 )
 
 type RemoteWork struct {
@@ -17,25 +20,48 @@ type RemoteWork struct {
 }
 
 func (rw *RemoteWork) Crawl() {
-	var links []string
+//	var links []string
+	var detailUrl string
 
-	doc, err := goquery.NewDocument(rw.Url)
-	if err != nil {
-		log.Fatal(err)
-		fmt.Println(err, "ERRRR")
+	rs := rw.fetchSearchResults(rw.Url)
+
+	for _, item := range rs {
+		obj := item.(map[string]interface{})
+		detailUrl = obj[`url`].(string)
+
+		// Start a go routine to get details of the page
+		fmt.Println(`details start for` + detailUrl)
+		rw.getDetails(rw.Host + "/" + detailUrl)
+		fmt.Println(`details came back for` + detailUrl)
 	}
-
-	doc.Find(`a[itemprop=url]`).Each(func (i int, s *goquery.Selection) {
-		a, _ := s.Attr(`href`)
-		links = append(links, a)
-		fmt.Println(a)
-	})
 }
 
-func (rw *RemoteWork) getDetails(uri string) {
-	url := rw.Host + uri
-	doc, err := goquery.NewDocument(rw.Host + url)
+func (rw *RemoteWork) fetchSearchResults(url string) []interface{} {
+	var response []interface{}
+
+	resp, err := http.Get(url)
 	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	defer resp.Body.Close()
+
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		fmt.Println(`Could not decode response`, err)
+		return nil
+	}
+
+	return response
+}
+
+func (rw *RemoteWork) getDetails(url string) {
+	doc, err := goquery.NewDocument(url)
+	if err != nil {
+		fmt.Println(67)
 		log.Fatal(err)
 		fmt.Println(err, "ERRRR")
 	}
@@ -47,11 +73,11 @@ func (rw *RemoteWork) getDetails(uri string) {
 	jobDetails.JobType = rw.getJobType(doc)
 	jobDetails.Location = rw.getLocation(doc)
 	jobDetails.PostedDate = rw.getPostedDate(doc)
-	jobDetails.Salary = rw.getSalaryRange(doc)
-	jobDetails.Title = rw.getJobTitle(doc)
-	jobDetails.Skills = rw.getSkills(doc)
-	jobDetails.Telecommute = rw.getTelecommuteAndTravel(doc)
-	jobDetails.Travel = rw.getTelecommuteAndTravel(doc)
+	//jobDetails.Salary = rw.getSalaryRange(doc)
+	//jobDetails.Title = rw.getJobTitle(doc)
+	//jobDetails.Skills = rw.getSkills(doc)
+	//jobDetails.Telecommute = rw.getTelecommuteAndTravel(doc)
+	//jobDetails.Travel = rw.getTelecommuteAndTravel(doc)
 
 	service.SearchAddJob(rw.Search, jobDetails)
 }
@@ -72,7 +98,7 @@ func (rw *RemoteWork) getSkills(doc *goquery.Document) []string {
 func (rw *RemoteWork) getJobDescription(doc *goquery.Document) string {
 	var ret string
 
-	doc.Find(``).Each(func (i int, s *goquery.Selection) {
+	doc.Find(`.description`).Each(func (i int, s *goquery.Selection) {
 		ret = s.Text()
 	})
 
@@ -109,20 +135,27 @@ func (rw *RemoteWork) getJobTitle(doc *goquery.Document) string {
 	return ret
 }
 
-func (rw *RemoteWork) getPostedDate(doc *goquery.Document) {
+func (rw *RemoteWork) getPostedDate(doc *goquery.Document) string {
+
 	doc.Find(``).Each(func (i int, s *goquery.Selection) {
 
 	})
+	return "test"
 }
 
-func (rw *RemoteWork) getJobType(doc *goquery.Document) {
+func (rw *RemoteWork) getJobType(doc *goquery.Document) string {
+
 	doc.Find(``).Each(func (i int, s *goquery.Selection) {
 
 	})
+
+	return `test`
 }
 
-func (rw *RemoteWork) getTelecommuteAndTravel(doc *goquery.Document) {
+func (rw *RemoteWork) getTelecommuteAndTravel(doc *goquery.Document) (int, int) {
+
 	doc.Find(``).Each(func (i int, s *goquery.Selection) {
 
 	})
+	return 1, 1
 }
