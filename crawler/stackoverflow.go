@@ -13,14 +13,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
-
-var wg sync.WaitGroup
-var skillMutex sync.Mutex
-var largestSalary float64
-var largestLink string
 
 type StackOverflow struct {
 	JobWriterChannel chan structures.JobDetail
@@ -31,63 +25,51 @@ type StackOverflow struct {
 
 // Crawl() starts the crawling process. It is the only method anyone outside this object cares about
 func (so *StackOverflow) Crawl() {
+	var jobs string
+	var totalJobs int
+	var jobLinks []string
+
+	urlChannel := make(chan string)
 	url := so.Url
+
 	fmt.Println(`URL: ` + url)
 
-	ret := make(map[string]int)
-	rs := so.fetchSearchResults(url)
-	fmt.Println(`search results came back with `, rs["count"].(float64), " results")
+	// Start routines for getting job details
+	for i := 0; i < 5; i++ {
+		go so.getDetails(so.JobWriterChannel, urlChannel)
+	}
 
-	if rs[`lastDocument`].(float64) <= 0 {
+	doc, _ := goquery.NewDocument(url)
+	doc.Find(`#index-hed .description`).Each(func (i int, s *goquery.Selection) {
+		jobs = strings.Replace(s.Text(), " jobs", "", -1);
+		jobs = strings.Replace(jobs, ",", "", -1)
+		totalJobs, _ = strconv.Atoi(jobs)
+	});
+
+	if totalJobs <= 0 {
 		fmt.Println(`No jobs found`)
 		return
 	}
 
-	detailUrl := ``
-	nextUrl := ``
-	for rs[`resultItemList`] != nil {
-		items := rs[`resultItemList`].([]interface{})
-		wg.Add(len(items))
-		for _, item := range items {
-			obj := item.(map[string]interface{})
-			detailUrl = obj[`detailUrl`].(string)
+	fmt.Println(`search results came back with `, totalJobs, " results")
 
-			// Start a go routine to get details of the page
-			go func(myUrl string) {
-				fmt.Println(`details start for` + myUrl)
-				jobDetails := so.getDetails(myUrl)
-				fmt.Println(`details came back for` + myUrl)
-				for i := 0; i < len(jobDetails.Skills); i++ {
-					tmp := strings.ToLower(jobDetails.Skills[i])
+	jobsPerPage := len(jobLinks)
+	for i := 1; i < totalJobs; i += jobsPerPage {
+		jobLinks = []string{}
+		doc, _ = goquery.NewDocument(url + `?pg=` + string(i))
+		doc.Find(`.job-link`).Each(func (i int, s *goquery.Selection) {
+			href, _ := s.Attr(`href`)
+			jobLinks = append(jobLinks, href)
+		});
 
-					skillMutex.Lock()
-					if _, ok := ret[tmp]; ok {
-						ret[tmp]++
-					} else {
-						ret[tmp] = 1
-					}
-					skillMutex.Unlock()
-				}
-				wg.Done()
-			}(detailUrl)
+		if len(jobLinks) <= 0 {
+			close(urlChannel)
+			break;
 		}
 
-		wg.Wait()
-
-		fmt.Println("Higest salary", largestSalary, " ", largestLink)
-
-		sortedKeys := SortedKeys(ret)
-		for _, k := range sortedKeys {
-			fmt.Println(k, ret[k])
+		for i := range jobLinks {
+			urlChannel <- jobLinks[i]
 		}
-
-		if rs[`nextUrl`] == nil {
-			break
-		}
-
-		nextUrl = rs[`nextUrl`].(string)
-		rs = so.fetchSearchResults(`http://service.so.com` + nextUrl)
-		fmt.Println(`search results came back`)
 	}
 }
 
@@ -123,40 +105,28 @@ func (so *StackOverflow) fetchSearchResults(url string) map[string]interface{} {
 	return response
 }
 
-func (so *StackOverflow) getDetails(url string) structures.JobDetail {
-	doc, err := goquery.NewDocument(url)
-	if err != nil {
-		log.Fatal(err)
-		fmt.Println(err, "ERRRR")
-	}
+func (so *StackOverflow) getDetails(jobWriterChannel chan structures.JobDetail, urlChannel chan string) {
+	for url := range urlChannel {
+		doc, err := goquery.NewDocument(url)
+		if err != nil {
+			log.Fatal(err)
+			fmt.Println(err, "ERRRR")
+		}
 
-	salaryRange := so.getSalaryRange(doc)
-	if salaryRange.MaxSalary > largestSalary {
-		largestSalary = salaryRange.MaxSalary
-		largestLink = url
-	}
-	if salaryRange.CalculatedMaxYearlySalary > largestSalary {
-		largestSalary = salaryRange.CalculatedMaxYearlySalary
-		largestLink = url
-	}
-	if salaryRange.Salary > largestSalary {
-		largestSalary = salaryRange.Salary
-		largestLink = url
-	}
+		var ret structures.JobDetail
+		ret.Telecommute, ret.Travel = so.getTelecommuteAndTravel(doc)
+		ret.Description = so.getJobDescription(doc)
+		ret.PostedDate = so.getPostedDate(doc)
+		ret.Salary = so.getSalaryRange(doc)
+		ret.Employer = so.getEmployer(doc)
+		ret.Location = so.getLocation(doc)
+		ret.Skills = so.getJobSkill(doc)
+		ret.JobType = so.getJobType(doc)
 
-	var ret structures.JobDetail
-	ret.Telecommute, ret.Travel = so.getTelecommuteAndTravel(doc)
-	ret.Description = so.getJobDescription(doc)
-	ret.PostedDate = so.getPostedDate(doc)
-	ret.Employer = so.getEmployer(doc)
-	ret.Location = so.getLocation(doc)
-	ret.Skills = so.getJobSkill(doc)
-	ret.JobType = so.getJobType(doc)
-	ret.Salary = salaryRange
 
-	fmt.Println(ret)
-
-	return ret
+		fmt.Println(ret)
+		so.JobWriterChannel <- ret
+	}
 }
 
 func (so *StackOverflow) getLocation(doc *goquery.Document) string {

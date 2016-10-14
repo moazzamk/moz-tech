@@ -19,15 +19,13 @@ import (
 )
 
 var wg sync.WaitGroup
-var mutex sync.Mutex
-var skillMutex sync.Mutex
-var largestSalary float64
-var largestLink string
+
 
 type Dice struct {
-	Url    string
-	Skills []string
+	JobWriter chan structures.JobDetail
 	Search **elastic.Client
+	Skills []string
+	Url    string
 }
 
 // Crawl() starts the crawling process. It is the only method anyone outside this object cares about
@@ -35,7 +33,6 @@ func (dice *Dice) Crawl() {
 	url := dice.Url
 	fmt.Println(`URL: ` + url)
 
-	ret := make(map[string]int)
 	rs := dice.fetchSearchResults(url)
 	fmt.Println(`search results came back with `, rs["count"].(float64), " results")
 
@@ -49,6 +46,7 @@ func (dice *Dice) Crawl() {
 	for rs[`resultItemList`] != nil {
 		items := rs[`resultItemList`].([]interface{})
 		wg.Add(len(items))
+
 		for _, item := range items {
 			obj := item.(map[string]interface{})
 			detailUrl = obj[`detailUrl`].(string)
@@ -56,31 +54,14 @@ func (dice *Dice) Crawl() {
 			// Start a go routine to get details of the page
 			go func (myUrl string) {
 				fmt.Println(`details start for` + myUrl)
-				jobDetails := dice.getDetails(myUrl)
+				dice.JobWriter <- dice.getDetails(myUrl)
 				fmt.Println(`details came back for` + myUrl)
-				for i := 0; i < len(jobDetails.Skills); i++ {
-					tmp := strings.ToLower(jobDetails.Skills[i])
 
-					skillMutex.Lock()
-					if _, ok := ret[tmp]; ok {
-						ret[tmp]++
-					} else {
-						ret[tmp] = 1
-					}
-					skillMutex.Unlock()
-				}
 				wg.Done()
 			}(detailUrl)
 		}
 
 		wg.Wait()
-
-		fmt.Println("Higest salary", largestSalary, " ", largestLink)
-
-		sortedKeys := SortedKeys(ret)
-		for _, k := range sortedKeys {
-			fmt.Println(k, ret[k])
-		}
 
 		if rs[`nextUrl`] == nil {
 			break
@@ -131,29 +112,15 @@ func (dice *Dice) getDetails(url string) structures.JobDetail {
 		fmt.Println(err, "ERRRR")
 	}
 
-	salaryRange := dice.getSalaryRange(doc)
-	if (salaryRange.MaxSalary > largestSalary) {
-		largestSalary = salaryRange.MaxSalary
-		largestLink = url
-	}
-	if (salaryRange.CalculatedMaxYearlySalary > largestSalary) {
-		largestSalary = salaryRange.CalculatedMaxYearlySalary
-		largestLink = url
-	}
-	if (salaryRange.Salary > largestSalary) {
-		largestSalary = salaryRange.Salary
-		largestLink = url
-	}
-
 	var ret structures.JobDetail
 	ret.Telecommute, ret.Travel = dice.getTelecommuteAndTravel(doc)
 	ret.Description = dice.getJobDescription(doc)
 	ret.PostedDate = dice.getPostedDate(doc)
+	ret.Salary = dice.getSalaryRange(doc)
 	ret.Employer = dice.getEmployer(doc)
 	ret.Location = dice.getLocation(doc)
 	ret.Skills = dice.getJobSkill(doc)
 	ret.JobType = dice.getJobType(doc)
-	ret.Salary = salaryRange
 
 	fmt.Println(ret)
 

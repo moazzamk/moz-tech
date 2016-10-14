@@ -52,7 +52,8 @@ func main() {
 	}(jobDetailWriter)
 
 	var doneChannels []chan bool
-	doneChannels = append(doneChannels, startRemoteWork(&client, jobDetailWriter))
+	//doneChannels = append(doneChannels, startRemoteWork(&client, jobDetailWriter))
+	doneChannels = append(doneChannels, startDice(&client, jobDetailWriter))
 
 	for i := range doneChannels {
 		_ = <- doneChannels[i]
@@ -64,7 +65,8 @@ func startDice(client **elastic.Client, JobDetailWriter chan structures.JobDetai
 
 	go func (doneChannel chan bool) {
 		diceCrawler := new(crawler.Dice)
-		diceCrawler.Url = `http://service.dice.com/api/rest/jobsearch/v1/simple.json?pgcnt=500&text=phalcon&state=TX`
+		diceCrawler.Url = `http://service.dice.com/api/rest/jobsearch/v1/simple.json?pgcnt=500&text=php&state=TX`
+		diceCrawler.JobWriter = JobDetailWriter
 		diceCrawler.Search = client
 		diceCrawler.Crawl()
 

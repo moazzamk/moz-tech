@@ -7,6 +7,7 @@ import (
 	"github.com/moazzamk/moz-tech/structures"
 	"crypto/md5"
 	"encoding/hex"
+	"fmt"
 )
 
 var esMutex sync.Mutex
@@ -31,6 +32,8 @@ func SearchHasSkill(client **elastic.Client, skill string) bool {
 		if err != nil {
 			panic(err)
 		}
+
+		fmt.Println(searchResult, `SEARCHY`)
 
 		if searchResult.Hits.TotalHits > 0 {
 			hasSkill[skill] = true
