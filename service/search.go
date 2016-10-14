@@ -33,7 +33,7 @@ func SearchHasSkill(client **elastic.Client, skill string) bool {
 			panic(err)
 		}
 
-		fmt.Println(searchResult, `SEARCHY`)
+		//fmt.Println(searchResult.TotalHits(), `SEARCHY`)
 
 		if searchResult.Hits.TotalHits > 0 {
 			hasSkill[skill] = true
@@ -48,7 +48,6 @@ func SearchHasSkill(client **elastic.Client, skill string) bool {
 }
 
 func SearchAddSkill(client **elastic.Client, skill string) (bool, error) {
-	//return true, nil
 	searchClient := *client
 	esMutex.Lock()
 	_, err := searchClient.Index().
@@ -72,6 +71,8 @@ func SearchAddJob(client **elastic.Client, job structures.JobDetail) {
 	hasher := md5.New()
 	hasher.Write([]byte(job.Link))
 	md5hash := hex.EncodeToString(hasher.Sum(nil))
+
+	fmt.Println(md5hash, "SSSS")
 
 	esMutex.Lock()
 	_, err := searchClient.

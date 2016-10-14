@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-	"sort"
 	"github.com/moazzamk/moz-tech/service"
 	"sync"
 	"strconv"
@@ -19,7 +18,6 @@ import (
 )
 
 var wg sync.WaitGroup
-
 
 type Dice struct {
 	JobWriter chan structures.JobDetail
@@ -54,7 +52,7 @@ func (dice *Dice) Crawl() {
 			// Start a go routine to get details of the page
 			go func (myUrl string) {
 				fmt.Println(`details start for` + myUrl)
-				dice.JobWriter <- dice.getDetails(myUrl)
+				dice.getDetails(myUrl)
 				fmt.Println(`details came back for` + myUrl)
 
 				wg.Done()
@@ -105,7 +103,7 @@ func (dice *Dice) fetchSearchResults(url string) map[string]interface{} {
 	return response
 }
 
-func (dice *Dice) getDetails(url string) structures.JobDetail {
+func (dice *Dice) getDetails(url string) {
 	doc, err := goquery.NewDocument(url)
 	if err != nil {
 		log.Fatal(err)
@@ -121,10 +119,11 @@ func (dice *Dice) getDetails(url string) structures.JobDetail {
 	ret.Location = dice.getLocation(doc)
 	ret.Skills = dice.getJobSkill(doc)
 	ret.JobType = dice.getJobType(doc)
+	ret.Title = dice.getJobTitle(doc)
+	ret.Source = `dice.com`
+	ret.Link = url
 
-	fmt.Println(ret)
-
-	return ret
+	dice.JobWriter <- ret
 }
 
 func (dice *Dice) getLocation(doc *goquery.Document) string {
@@ -151,50 +150,50 @@ if the salary isnt already yearly
 */
 func (dice *Dice) getSalaryRange(doc *goquery.Document) (*structures.SalaryRange) {
 	ret := new(structures.SalaryRange)
+	var salary string
+
 	doc.Find(`.icon-bank-note`).Each(func (i int, s *goquery.Selection) {
-
-		str := s.Parent().Siblings().Text()
-		re := regexp.MustCompile(`[$0-9,.kK]+\s*(-|to)*\s*[$0-9,.kK]+`)
-		charsToReplace := map[string]string{
-			`k`: `000`,
-			`K`: `000`,
-			`,`: ``,
-			`$`: ``,
-			`to`: `-`,
-			` `: ``,
-		}
-
-
-		ret.OriginalSalary = str
-		tmp := re.FindString(str)
-
-		if tmp == `` {
-			fmt.Println(str, " was empty")
-			return
-		}
-
-		for j, v := range charsToReplace {
-			tmp = strings.Replace(tmp, j, v, -1)
-		}
-
-		rangeArray := strings.Split(tmp, `-`)
-		rangeArrayLen := len(rangeArray)
-		if rangeArrayLen == 2 {
-			ret.MinSalary, _ = strconv.ParseFloat(rangeArray[0], 64)
-			ret.MaxSalary, _ = strconv.ParseFloat(rangeArray[1], 64)
-		} else if rangeArrayLen == 1 { // Salary is not a range
-			ret.Salary, _ = strconv.ParseFloat(rangeArray[0], 64)
-		}
-
-		// Calculate yearly salary if its an hourly position
-		if (strings.Contains(str, `hr`) || strings.Contains(str, `hour`)) {
-			ret.CalculatedMinYearlySalary = ret.MinSalary * 40 * 52
-			ret.CalculatedMaxYearlySalary = ret.MaxSalary * 40 * 52
-			ret.CalculatedSalary = ret.Salary * 40 * 52
-		}
-
-		return
+		s.Parent().Siblings().Find(`.mL20`).Each(func(j int, r *goquery.Selection) {
+			salary = r.Text()
+		})
 	})
+
+	re := regexp.MustCompile(`[$0-9,.kK]+\s*(-|to)*\s*[$0-9,.kK]+`)
+	charsToReplace := map[string]string{
+		`k`: `000`,
+		`K`: `000`,
+		`,`: ``,
+		`$`: ``,
+		`to`: `-`,
+		` `: ``,
+		`\t`: ``,
+	}
+
+	ret.OriginalSalary = salary
+	tmp := re.FindString(salary)
+	if tmp == `` {
+		return ret
+	}
+
+	for j, v := range charsToReplace {
+		tmp = strings.Replace(tmp, j, v, -1)
+	}
+
+	rangeArray := strings.Split(tmp, `-`)
+	rangeArrayLen := len(rangeArray)
+	if rangeArrayLen == 2 {
+		ret.MinSalary, _ = strconv.ParseFloat(rangeArray[0], 64)
+		ret.MaxSalary, _ = strconv.ParseFloat(rangeArray[1], 64)
+	} else if rangeArrayLen == 1 { // Salary is not a range
+		ret.Salary, _ = strconv.ParseFloat(rangeArray[0], 64)
+	}
+
+	// Calculate yearly salary if its an hourly position
+	if (strings.Contains(salary, `hr`) || strings.Contains(salary, `hour`)) {
+		ret.CalculatedMinYearlySalary = ret.MinSalary * 40 * 52
+		ret.CalculatedMaxYearlySalary = ret.MaxSalary * 40 * 52
+		ret.CalculatedSalary = ret.Salary * 40 * 52
+	}
 
 	return ret
 }
@@ -260,11 +259,13 @@ func (dice *Dice) getPostedDate(doc *goquery.Document) string {
 	return ret
 }
 
-func (dice *Dice) getJobType(doc *goquery.Document) string {
-	var ret string
+func (dice *Dice) getJobType(doc *goquery.Document) []string {
+	var ret []string
 
 	doc.Find(`.icon-briefcase`).Each(func (i int, s *goquery.Selection) {
-		ret = s.Parent().Siblings().Text()
+		s.Parent().Siblings().Find(`.iconsiblings span`).Each(func(j int, r *goquery.Selection) {
+			ret = strings.Split(r.Text(), `,`)
+		})
 	})
 
 	return ret
@@ -279,7 +280,7 @@ func (dice *Dice) getJobSkill(doc *goquery.Document) []string {
 
 	uniqueSlice := structures.NewUniqueSlice(strings.Split(sss, `,`))
 
-	fmt.Println("SL", uniqueSlice, sss)
+	//fmt.Println("SL", uniqueSlice, sss)
 
 	skills := dice.processJobSkill(uniqueSlice)
 
@@ -451,36 +452,4 @@ func (dice *Dice) getNormalizedSkillSynonym(skill string) string {
 	}
 
 	return ret
-}
-
-type SortedMap struct {
-	m map[string]int
-	s []string
-}
-
-func (sm *SortedMap) Len() int {
-	return len(sm.m)
-}
-
-func (sm *SortedMap) Less(i, j int) bool {
-	return sm.m[sm.s[i]] > sm.m[sm.s[j]]
-}
-
-func (sm *SortedMap) Swap(i, j int) {
-	sm.s[i], sm.s[j] = sm.s[j], sm.s[i]
-}
-
-func SortedKeys(m map[string]int) []string {
-	sm := new(SortedMap)
-	sm.m = m
-	sm.s = make([]string, len(m))
-
-	i := 0
-	for key, _ := range m {
-		sm.s[i] = key
-		i++
-	}
-
-	sort.Sort(sm)
-	return sm.s
 }

@@ -46,7 +46,8 @@ func main() {
 	jobDetailWriter := make(chan structures.JobDetail)
 
 	go func (chan structures.JobDetail) {
-		for i := range jobDetailWriter {
+		for i := range  jobDetailWriter {
+			fmt.Println(i)
 			service.SearchAddJob(&client, i)
 		}
 	}(jobDetailWriter)
@@ -65,7 +66,7 @@ func startDice(client **elastic.Client, JobDetailWriter chan structures.JobDetai
 
 	go func (doneChannel chan bool) {
 		diceCrawler := new(crawler.Dice)
-		diceCrawler.Url = `http://service.dice.com/api/rest/jobsearch/v1/simple.json?pgcnt=500&text=php&state=TX`
+		diceCrawler.Url = `http://service.dice.com/api/rest/jobsearch/v1/simple.json?pgcnt=500&text=php`
 		diceCrawler.JobWriter = JobDetailWriter
 		diceCrawler.Search = client
 		diceCrawler.Crawl()

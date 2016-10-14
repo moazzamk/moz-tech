@@ -146,13 +146,13 @@ func (rw *RemoteWork) getPostedDate(doc *goquery.Document) string {
 	return "test"
 }
 
-func (rw *RemoteWork) getJobType(doc *goquery.Document) string {
+func (rw *RemoteWork) getJobType(doc *goquery.Document) []string {
 
 	doc.Find(``).Each(func (i int, s *goquery.Selection) {
 
 	})
 
-	return `test`
+	return []string{ `test` }
 }
 
 func (rw *RemoteWork) getTelecommuteAndTravel(doc *goquery.Document) (int, int) {
