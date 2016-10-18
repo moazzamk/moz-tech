@@ -31,6 +31,7 @@ func (dice *Dice) Crawl() {
 	url := dice.Url
 	fmt.Println(`URL: ` + url)
 
+
 	rs := dice.fetchSearchResults(url)
 	fmt.Println(`search results came back with `, rs["count"].(float64), " results")
 

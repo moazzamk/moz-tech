@@ -17,17 +17,17 @@ import (
 )
 
 type StackOverflow struct {
-	JobWriterChannel chan structures.JobDetail
-	Search           **elastic.Client
-	Skills           []string
-	Url              string
+	JobWriter chan structures.JobDetail
+	Search    **elastic.Client
+	Skills    []string
+	Url       string
+	Host      string
 }
 
 // Crawl() starts the crawling process. It is the only method anyone outside this object cares about
 func (so *StackOverflow) Crawl() {
-	var jobs string
 	var totalJobs int
-	var jobLinks []string
+	var jobs string
 
 	urlChannel := make(chan string)
 	url := so.Url
@@ -36,41 +36,52 @@ func (so *StackOverflow) Crawl() {
 
 	// Start routines for getting job details
 	for i := 0; i < 5; i++ {
-		go so.getDetails(so.JobWriterChannel, urlChannel)
+		go so.getDetails(so.JobWriter, urlChannel)
 	}
 
 	doc, _ := goquery.NewDocument(url)
-	doc.Find(`#index-hed .description`).Each(func (i int, s *goquery.Selection) {
-		jobs = strings.Replace(s.Text(), " jobs", "", -1);
-		jobs = strings.Replace(jobs, ",", "", -1)
-		totalJobs, _ = strconv.Atoi(jobs)
-	});
 
+	// Get total number of jobs
+	doc.Find(`#index-hed .description`).Each(func(i int, s *goquery.Selection) {
+		jobs = strings.Replace(s.Text(), " jobs", "", -1)
+		jobs = strings.Replace(jobs, ",", "", -1)
+		jobs = strings.Replace(jobs, ` `, ``, -1)
+		totalJobs, _ = strconv.Atoi(jobs)
+	})
 	if totalJobs <= 0 {
 		fmt.Println(`No jobs found`)
 		return
 	}
+	fmt.Println(`Stack Overflow came back with `, totalJobs, " results")
 
-	fmt.Println(`search results came back with `, totalJobs, " results")
+	// Get number of jobs per page
+	jobsPerPage := 0
+	doc.Find(`h2 a.job-link`).Each(func (i int, s *goquery.Selection) {
+		jobsPerPage++
+	})
+	fmt.Println(`SO found jobs per page : `, jobsPerPage)
 
-	jobsPerPage := len(jobLinks)
-	for i := 1; i < totalJobs; i += jobsPerPage {
-		jobLinks = []string{}
+	jobCount := something(doc, urlChannel)
+	for i := 2; jobCount > 0; i++ {
 		doc, _ = goquery.NewDocument(url + `?pg=` + string(i))
-		doc.Find(`.job-link`).Each(func (i int, s *goquery.Selection) {
-			href, _ := s.Attr(`href`)
-			jobLinks = append(jobLinks, href)
-		});
+		jobCount = something(doc, urlChannel)
 
-		if len(jobLinks) <= 0 {
-			close(urlChannel)
-			break;
-		}
 
-		for i := range jobLinks {
-			urlChannel <- jobLinks[i]
-		}
+		tmp , _ := doc.Html()
+		fmt.Println(tmp, doc.Text(), url + `?pg=` + string(i))
 	}
+}
+
+func something(doc *goquery.Document, urlChannel chan string) int {
+	var jobCount = 0
+
+	doc.Find(`h2 a.job-link`).Each(func(i int, s *goquery.Selection) {
+		jobCount++
+		href, _ := s.Attr(`href`)
+		urlChannel <- href
+	})
+
+	return jobCount
 }
 
 func (so *StackOverflow) getJobDescription(doc *goquery.Document) string {
@@ -81,6 +92,30 @@ func (so *StackOverflow) getJobDescription(doc *goquery.Document) string {
 	})
 
 	return ret
+}
+
+func (so *StackOverflow) getDetails(jobWriterChannel chan structures.JobDetail, urlChannel chan string) {
+	for url := range urlChannel {
+		fmt.Println(`Starting`, url)
+		doc, err := goquery.NewDocument(so.Host + url)
+		if err != nil {
+			log.Fatal(err)
+			fmt.Println(err, "ERRRR")
+		}
+
+		var ret structures.JobDetail
+		ret.Telecommute, ret.Travel = so.getTelecommuteAndTravel(doc)
+		ret.Description = so.getJobDescription(doc)
+		ret.PostedDate = so.getPostedDate(doc)
+		ret.Salary = so.getSalaryRange(doc)
+		ret.Employer = so.getEmployer(doc)
+		ret.Location = so.getLocation(doc)
+		ret.Skills = so.getJobSkill(doc)
+		ret.JobType = so.getJobType(doc)
+
+		fmt.Println(ret)
+		so.JobWriter <- ret
+	}
 }
 
 func (so *StackOverflow) fetchSearchResults(url string) map[string]interface{} {
@@ -105,29 +140,6 @@ func (so *StackOverflow) fetchSearchResults(url string) map[string]interface{} {
 	return response
 }
 
-func (so *StackOverflow) getDetails(jobWriterChannel chan structures.JobDetail, urlChannel chan string) {
-	for url := range urlChannel {
-		doc, err := goquery.NewDocument(url)
-		if err != nil {
-			log.Fatal(err)
-			fmt.Println(err, "ERRRR")
-		}
-
-		var ret structures.JobDetail
-		ret.Telecommute, ret.Travel = so.getTelecommuteAndTravel(doc)
-		ret.Description = so.getJobDescription(doc)
-		ret.PostedDate = so.getPostedDate(doc)
-		ret.Salary = so.getSalaryRange(doc)
-		ret.Employer = so.getEmployer(doc)
-		ret.Location = so.getLocation(doc)
-		ret.Skills = so.getJobSkill(doc)
-		ret.JobType = so.getJobType(doc)
-
-
-		fmt.Println(ret)
-		so.JobWriterChannel <- ret
-	}
-}
 
 func (so *StackOverflow) getLocation(doc *goquery.Document) string {
 	var ret string
@@ -261,11 +273,11 @@ func (so *StackOverflow) getPostedDate(doc *goquery.Document) string {
 	return ret
 }
 
-func (so *StackOverflow) getJobType(doc *goquery.Document) string {
-	var ret string
+func (so *StackOverflow) getJobType(doc *goquery.Document) []string {
+	var ret []string
 
 	doc.Find(`.icon-briefcase`).Each(func(i int, s *goquery.Selection) {
-		ret = s.Parent().Siblings().Text()
+		ret = strings.Split(s.Parent().Siblings().Text(), `,`)
 	})
 
 	return ret
