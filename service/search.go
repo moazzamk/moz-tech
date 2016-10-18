@@ -8,6 +8,8 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"encoding/json"
+	"reflect"
 )
 
 var esMutex sync.Mutex
@@ -88,4 +90,40 @@ func SearchAddJob(client **elastic.Client, job structures.JobDetail) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func SearchGetSkills(client **elastic.Client, start int, end int) *elastic.SearchResult {
+	var ret []string
+	searchClient := *client
+
+	esMutex.Lock()
+//	searchQuery := elastic.NewTermQuery(`skill`, skill)
+	searchResult, _ := searchClient.Search().
+		Index(`jobs`).
+		Type(`skills`).
+//		Query(searchQuery).
+		Pretty(true).
+		Do()
+	esMutex.Unlock()
+
+	var tt map[string]string
+	for _, item := range searchResult.Each(reflect.TypeOf(tt)) {
+		fmt.Println()
+	}
+
+
+	fmt.Println(searchResult.TotalHits(), "ITS")
+	t := make(map[string]interface{})
+	for _, hit := range searchResult.Hits.Hits {
+		_ = json.Unmarshal(*hit.Source, tt)
+		fmt.Println(tt, string(*hit.Source))
+		ret = append(ret, t[`skill`].(string))
+
+	}
+
+		fmt.Println(ret)
+
+	return searchResult
+
+
 }
