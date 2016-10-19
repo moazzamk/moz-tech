@@ -39,24 +39,52 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("Initialized")
+	fmt.Println("Webserver Initialized")
 
 
 	mux := http.NewServeMux()
-	mux.HandleFunc(`/skills`, func (rs http.ResponseWriter, rq *http.Request) {
-		rs1 := service.SearchGetSkills(&client, 0, 100)
 
-		fmt.Println(rs1)
+	// Routes
 
-
-		t := template.New(`list.html`)
-		t, _ = t.ParseFiles(templatePath + `/skills/list.html`)
-		err := t.Execute(rs, nil)
+	// Search jobs
+	mux.HandleFunc(`/search`, func (rs http.ResponseWriter, rq *http.Request) {
+		t := template.New(`search.html`)
+		t, _ = t.ParseFiles(templatePath + `/jobs/search.html`)
+		err := t.Execute(rs, make(map[string]string))
 		if err != nil {
 			fmt.Println(err)
 		}
 	})
 
+	/**
+
+	 * Delete a skill by it's ID
+	 */
+	mux.HandleFunc(`/skills/del`, func (rs http.ResponseWriter, rq *http.Request) {
+		_, err := client.Delete().Index(`jobs`).Type(`skills`).Id(rq.URL.Query()[`id`][0]).Do()
+		if err != nil {
+			fmt.Println(`ERRRRR`, err)
+		}
+		http.Redirect(rs, rq, `/skills`, 302)
+	})
+
+	/**
+	 * List all skills
+	 */
+	mux.HandleFunc(`/skills`, func (rs http.ResponseWriter, rq *http.Request) {
+		rs1 := service.SearchGetSkills(&client, 0, 100)
+
+		t := template.New(`list.html`)
+		t, _ = t.ParseFiles(templatePath + `/skills/list.html`)
+		err := t.Execute(rs, rs1)
+		if err != nil {
+			fmt.Println(err)
+		}
+	})
+
+	/**
+	 * Home page
+	 */
 	mux.HandleFunc(`/`, func (rs http.ResponseWriter, rq *http.Request) {
 		t := template.New(`list.html`)
 		t, _ = t.ParseFiles(templatePath + `/skills/list.html`)

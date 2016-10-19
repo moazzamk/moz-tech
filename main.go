@@ -65,11 +65,11 @@ func startDice(client **elastic.Client, JobDetailWriter chan structures.JobDetai
 	var doneChannel = make(chan bool)
 
 	go func(doneChannel chan bool) {
-		diceCrawler := new(crawler.Dice)
-		diceCrawler.Url = `http://service.dice.com/api/rest/jobsearch/v1/simple.json?pgcnt=500&text=python`
-		diceCrawler.JobWriter = JobDetailWriter
-		diceCrawler.Search = client
-		diceCrawler.Crawl()
+		worker := new(crawler.Dice)
+		worker.Url = `http://service.dice.com/api/rest/jobsearch/v1/simple.json?pgcnt=500&text=python`
+		worker.JobWriter = JobDetailWriter
+		worker.Search = client
+		worker.Crawl()
 
 		close(doneChannel)
 	}(doneChannel)
@@ -81,11 +81,11 @@ func startLinkedIn(client **elastic.Client, jobWriter chan structures.JobDetail)
 	var doneChannel = make(chan bool)
 
 	go func(doneChannel chan bool, jobWriter chan structures.JobDetail) {
-		crawler := new(crawler.LinkedIn)
-		crawler.Url = `https://www.linkedin.com/jobs/search?keywords=&location=Dallas%2FFort%20Worth%20Area&locationId=`
-		crawler.JobWriter = jobWriter
-		crawler.Search = client
-		crawler.Crawl()
+		worker := new(crawler.LinkedIn)
+		worker.Url = `https://www.linkedin.com/jobs/search?keywords=&location=Dallas%2FFort%20Worth%20Area&locationId=`
+		worker.JobWriter = jobWriter
+		worker.Search = client
+		worker.Crawl()
 
 		//time.Sleep(1000 * time.Millisecond)
 
@@ -101,13 +101,13 @@ func startStackOverflow(client **elastic.Client, JobDetailWriter chan structures
 	var doneChannel = make(chan bool)
 
 	go func (doneChannel chan bool, jobDetailWriter chan structures.JobDetail) {
-		crawler := new(crawler.StackOverflow)
-		crawler.Url = `http://stackoverflow.com/jobs`
-		crawler.Host = `http://stackoverflow.com/`
-		crawler.JobWriter = JobDetailWriter
-		crawler.Search = client
+		worker := new(crawler.StackOverflow)
+		worker.Url = `http://stackoverflow.com/jobs`
+		worker.Host = `http://stackoverflow.com/`
+		worker.JobWriter = JobDetailWriter
+		worker.Search = client
 
-		crawler.Crawl()
+		worker.Crawl()
 
 		close (doneChannel)
 	}(doneChannel, JobDetailWriter)

@@ -2,13 +2,8 @@
     <h2>Skills</h2>
 </div>
 
-<div>
-    <form action="/skills" method="delete">
-        Delete: <input type="text" name="skill" />
-        <input type="submit" value="GO"/>
-    </form>
-</div>
-
 <ul>
-
+    {{ range $item := . }}
+        <li><a href="/skills/del?id={{ $item.id }}">Del</a> {{ $item.skill }}</li>
+    {{ end }}
 </ul>
