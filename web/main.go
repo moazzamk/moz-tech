@@ -12,7 +12,7 @@ import (
 	"github.com/moazzamk/moz-tech/service"
 )
 
-var templatePath = `/Users/mkhan/gosites/src/github.com/moazzamk/moz-tech/web/views`
+var templatePath = `/Users/moz/gosites/src/github.com/moazzamk/moz-tech/web/views`
 
 func main() {
 
@@ -48,12 +48,20 @@ func main() {
 
 	// Search jobs
 	mux.HandleFunc(`/search`, func (rs http.ResponseWriter, rq *http.Request) {
+		requestData := rq.URL.Query()
+
+		if query, ok := requestData[`q`]; ok {
+			service.SearchGetJobs(&client, query[0], 0, 10)
+		}
+
 		t := template.New(`search.html`)
 		t, _ = t.ParseFiles(templatePath + `/jobs/search.html`)
 		err := t.Execute(rs, make(map[string]string))
 		if err != nil {
 			fmt.Println(err)
 		}
+
+
 	})
 
 	/**
@@ -106,4 +114,3 @@ func main() {
 
 	log.Fatal(s.ListenAndServe())
 }
-

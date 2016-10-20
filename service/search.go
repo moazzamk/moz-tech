@@ -8,7 +8,6 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"encoding/json"
 	"reflect"
 )
 
@@ -92,12 +91,34 @@ func SearchAddJob(client **elastic.Client, job structures.JobDetail) {
 	}
 }
 
-func SearchGetSkills(client **elastic.Client, start int, end int) *elastic.SearchResult {
-	var ret []string
+func SearchGetJobs(client **elastic.Client, search string, start int, end int) []structures.JobDetail {
+	var ret []structures.JobDetail
+	var tmp structures.JobDetail
+
 	searchClient := *client
 
 	esMutex.Lock()
-//	searchQuery := elastic.NewTermQuery(`skill`, skill)
+	query := elastic.NewTermQuery(`skill`, search)
+	searchResult, _ := searchClient.Search().
+								Index(`jobs`).
+								Type(`skills`).
+								Query(query).
+								Pretty(true).
+								Do()
+	esMutex.Unlock()
+
+	for _, item := range searchResult.Each(reflect.TypeOf(tmp)) {
+		ret = append(ret, item.(structures.JobDetail))
+	}
+
+	return ret
+}
+
+func SearchGetSkills(client **elastic.Client, start int, end int) []map[string]string {
+	ret := []map[string]string{}
+	searchClient := *client
+
+	esMutex.Lock()
 	searchResult, _ := searchClient.Search().
 		Index(`jobs`).
 		Type(`skills`).
@@ -108,10 +129,11 @@ func SearchGetSkills(client **elastic.Client, start int, end int) *elastic.Searc
 
 	var tt map[string]string
 	for _, item := range searchResult.Each(reflect.TypeOf(tt)) {
-		fmt.Println()
+		fmt.Println(item, "DDDDD")
+		break
 	}
 
-
+/*
 	fmt.Println(searchResult.TotalHits(), "ITS")
 	t := make(map[string]interface{})
 	for _, hit := range searchResult.Hits.Hits {
@@ -121,9 +143,10 @@ func SearchGetSkills(client **elastic.Client, start int, end int) *elastic.Searc
 
 	}
 
-		fmt.Println(ret)
 
-	return searchResult
+*/
 
+	fmt.Println(ret)
+	return ret
 
 }
