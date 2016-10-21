@@ -54,16 +54,9 @@ func (so *StackOverflow) Crawl() {
 	}
 	fmt.Println(`Stack Overflow came back with `, totalJobs, " results")
 
-	// Get number of jobs per page
-	jobsPerPage := 0
-	doc.Find(`h2 a.job-link`).Each(func (i int, s *goquery.Selection) {
-		jobsPerPage++
-	})
-	fmt.Println(`SO found jobs per page : `, jobsPerPage)
-
 	jobCount := so.dispatchJobs(doc, jobChannel)
 	for i := 2; jobCount > 0; i++ {
-		doc, _ = goquery.NewDocument(url + `?pg=` + string(i))
+		doc, _ = goquery.NewDocument(url + `?pg=` + strconv.Itoa(i))
 		jobCount = so.dispatchJobs(doc, jobChannel)
 	}
 }
@@ -75,12 +68,19 @@ func (so *StackOverflow) dispatchJobs(doc *goquery.Document, jobChannel chan str
 		jobCount++
 		href, _ := s.Attr(`href`)
 
+		if service.SearchHasJobWithUrl(so.Search, href) {
+			fmt.Println(`SO JOB INDEXED ALREADY ` + href)
+			return
+		}
+
 		job := structures.JobDetail{}
 		job.PostedDate = so.getPostedDate(doc)
 		job.Link = href
 
 		jobChannel <- job
 	})
+
+	fmt.Println(`DISPATCH FINISHED WITH CNT:` + strconv.Itoa(jobCount) + ` ` + doc.Url.String())
 
 	return jobCount
 }
@@ -103,7 +103,9 @@ func (so *StackOverflow) getDetails(jobWriterChannel chan structures.JobDetail, 
 			fmt.Println(err, "ERRRR")
 			log.Fatal(err)
 		}
-		
+
+		service.SearchHasJobWithUrl(so.Search, job.Link)
+
 		job.Telecommute, job.Travel = so.getTelecommuteAndTravel(doc)
 		job.Description = so.getJobDescription(doc)
 		job.Salary = so.getSalaryRange(doc)
@@ -165,52 +167,13 @@ Get salary from the job posting and translate it to yearly salary
 if the salary isnt already yearly
 */
 func (so *StackOverflow) getSalaryRange(doc *goquery.Document) *structures.SalaryRange {
-	ret := new(structures.SalaryRange)
+	salaryParser := service.SalaryParser{}
+	var salary string
 	doc.Find(`.salary`).Each(func(i int, s *goquery.Selection) {
-
-		str := s.Text()
-		re := regexp.MustCompile(`[$0-9,.kK]+\s*(-|to)*\s*[$0-9,.kK]+`)
-		charsToReplace := map[string]string{
-			`k`:  `000`,
-			`K`:  `000`,
-			`,`:  ``,
-			`$`:  ``,
-			`to`: `-`,
-			` `:  ``,
-		}
-
-		ret.OriginalSalary = str
-		tmp := re.FindString(str)
-
-		if tmp == `` {
-			fmt.Println(str, " was empty")
-			return
-		}
-
-		for j, v := range charsToReplace {
-			tmp = strings.Replace(tmp, j, v, -1)
-		}
-
-		rangeArray := strings.Split(tmp, `-`)
-		rangeArrayLen := len(rangeArray)
-		if rangeArrayLen == 2 {
-			ret.MinSalary, _ = strconv.ParseFloat(rangeArray[0], 64)
-			ret.MaxSalary, _ = strconv.ParseFloat(rangeArray[1], 64)
-		} else if rangeArrayLen == 1 { // Salary is not a range
-			ret.Salary, _ = strconv.ParseFloat(rangeArray[0], 64)
-		}
-
-		// Calculate yearly salary if its an hourly position
-		if strings.Contains(str, `hr`) || strings.Contains(str, `hour`) {
-			ret.CalculatedMinYearlySalary = ret.MinSalary * 40 * 52
-			ret.CalculatedMaxYearlySalary = ret.MaxSalary * 40 * 52
-			ret.CalculatedSalary = ret.Salary * 40 * 52
-		}
-
-		return
+		salary = s.Text()
 	})
 
-	return ret
+	return salaryParser.Parse(salary)
 }
 
 func (so *StackOverflow) getJobTitle(doc *goquery.Document) string {
@@ -285,7 +248,7 @@ func (so *StackOverflow) getJobSkill(doc *goquery.Document) []string {
 
 	uniqueSlice := structures.NewUniqueSlice(tags)
 
-	fmt.Println("SL", uniqueSlice, tags)
+	//fmt.Println("SL", uniqueSlice, tags)
 
 	skills := so.processJobSkill(uniqueSlice)
 

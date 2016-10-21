@@ -39,6 +39,12 @@ func main() {
 		panic(err)
 	}
 
+/*
+	_, err = client.DeleteByQuery().Index(`jobs`).Type(`job`).QueryString(`test`).Do()
+	if err != nil {
+		panic(err)
+	}
+*/
 	fmt.Println("Initialized")
 
 	jobDetailWriter := make(chan structures.JobDetail)
@@ -53,8 +59,8 @@ func main() {
 	var doneChannels []chan bool
 	//doneChannels = append(doneChannels, startRemoteWork(&client, jobDetailWriter))
 	//doneChannels = append(doneChannels, startLinkedIn(&client, jobDetailWriter))
-	//doneChannels = append(doneChannels, startDice(&client, jobDetailWriter))
-	doneChannels = append(doneChannels, startStackOverflow(&client, jobDetailWriter))
+	doneChannels = append(doneChannels, startDice(&client, jobDetailWriter))
+	//doneChannels = append(doneChannels, startStackOverflow(&client, jobDetailWriter))
 
 	for i := range doneChannels {
 		_ = <-doneChannels[i]

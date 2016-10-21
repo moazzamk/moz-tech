@@ -48,6 +48,28 @@ func SearchHasSkill(client **elastic.Client, skill string) bool {
 	return ret
 }
 
+func SearchHasJobWithUrl(client **elastic.Client, url string) bool {
+	searchClient := *client
+
+	hasher := md5.New()
+	hasher.Write([]byte(url))
+	md5hash := hex.EncodeToString(hasher.Sum(nil))
+
+	esMutex.Lock()
+	rs, err := searchClient.Get().
+							Index(`jobs`).
+							Type(`job`).
+							Id(md5hash).
+							Do()
+	esMutex.Unlock()
+
+	if err != nil {
+		return false
+	}
+
+	return rs.Found
+}
+
 func SearchAddSkill(client **elastic.Client, skill string) (bool, error) {
 	searchClient := *client
 	esMutex.Lock()

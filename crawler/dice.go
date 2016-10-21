@@ -28,9 +28,15 @@ type Dice struct {
 
 // Crawl() starts the crawling process. It is the only method anyone outside this object cares about
 func (dice *Dice) Crawl() {
+	jobChannel := make(chan structures.JobDetail)
 	url := dice.Url
-	fmt.Println(`URL: ` + url)
 
+	// Start routines for getting job details
+	for i := 0; i < 5; i++ {
+		go dice.getDetails(jobChannel)
+	}
+
+	fmt.Println(`URL: ` + url)
 
 	rs := dice.fetchSearchResults(url)
 	fmt.Println(`search results came back with `, rs["count"].(float64), " results")
@@ -44,23 +50,19 @@ func (dice *Dice) Crawl() {
 	nextUrl := ``
 	for rs[`resultItemList`] != nil {
 		items := rs[`resultItemList`].([]interface{})
-		wg.Add(len(items))
-
 		for _, item := range items {
 			obj := item.(map[string]interface{})
 			detailUrl = obj[`detailUrl`].(string)
 
-			// Start a go routine to get details of the page
-			go func (myUrl string) {
-				fmt.Println(`details start for` + myUrl)
-				dice.getDetails(myUrl)
-				fmt.Println(`details came back for` + myUrl)
+			tmp := structures.JobDetail{}
+			tmp.Link = detailUrl
+			if service.SearchHasJobWithUrl(dice.Search, detailUrl) {
+				fmt.Println(`DICE JOB INDEXED ALREADY ` + detailUrl)
+				continue
+			}
 
-				wg.Done()
-			}(detailUrl)
+			jobChannel <- tmp
 		}
-
-		wg.Wait()
 
 		if rs[`nextUrl`] == nil {
 			break
@@ -104,27 +106,28 @@ func (dice *Dice) fetchSearchResults(url string) map[string]interface{} {
 	return response
 }
 
-func (dice *Dice) getDetails(url string) {
-	doc, err := goquery.NewDocument(url)
-	if err != nil {
-		log.Fatal(err)
-		fmt.Println(err, "ERRRR")
+func (dice *Dice) getDetails(jobChannel chan structures.JobDetail) {
+	for job := range jobChannel {
+		doc, err := goquery.NewDocument(job.Link)
+		if err != nil {
+			log.Fatal(err)
+			fmt.Println(err, "ERRRR")
+		}
+
+		var ret structures.JobDetail
+		ret.Telecommute, ret.Travel = dice.getTelecommuteAndTravel(doc)
+		ret.Description = dice.getJobDescription(doc)
+		ret.PostedDate = dice.getPostedDate(doc)
+		ret.Salary = dice.getSalaryRange(doc)
+		ret.Employer = dice.getEmployer(doc)
+		ret.Location = dice.getLocation(doc)
+		ret.Skills = dice.getJobSkill(doc)
+		ret.JobType = dice.getJobType(doc)
+		ret.Title = dice.getJobTitle(doc)
+		ret.Source = `dice.com`
+
+		dice.JobWriter <- ret
 	}
-
-	var ret structures.JobDetail
-	ret.Telecommute, ret.Travel = dice.getTelecommuteAndTravel(doc)
-	ret.Description = dice.getJobDescription(doc)
-	ret.PostedDate = dice.getPostedDate(doc)
-	ret.Salary = dice.getSalaryRange(doc)
-	ret.Employer = dice.getEmployer(doc)
-	ret.Location = dice.getLocation(doc)
-	ret.Skills = dice.getJobSkill(doc)
-	ret.JobType = dice.getJobType(doc)
-	ret.Title = dice.getJobTitle(doc)
-	ret.Source = `dice.com`
-	ret.Link = url
-
-	dice.JobWriter <- ret
 }
 
 func (dice *Dice) getLocation(doc *goquery.Document) string {
@@ -150,7 +153,7 @@ Get salary from the job posting and translate it to yearly salary
 if the salary isnt already yearly
 */
 func (dice *Dice) getSalaryRange(doc *goquery.Document) (*structures.SalaryRange) {
-	ret := new(structures.SalaryRange)
+	var salaryParser service.SalaryParser
 	var salary string
 
 	doc.Find(`.icon-bank-note`).Each(func (i int, s *goquery.Selection) {
@@ -159,44 +162,7 @@ func (dice *Dice) getSalaryRange(doc *goquery.Document) (*structures.SalaryRange
 		})
 	})
 
-	re := regexp.MustCompile(`[$0-9,.kK]+\s*(-|to)*\s*[$0-9,.kK]+`)
-	charsToReplace := map[string]string{
-		`k`: `000`,
-		`K`: `000`,
-		`,`: ``,
-		`$`: ``,
-		`to`: `-`,
-		` `: ``,
-		`\t`: ``,
-	}
-
-	ret.OriginalSalary = salary
-	tmp := re.FindString(salary)
-	if tmp == `` {
-		return ret
-	}
-
-	for j, v := range charsToReplace {
-		tmp = strings.Replace(tmp, j, v, -1)
-	}
-
-	rangeArray := strings.Split(tmp, `-`)
-	rangeArrayLen := len(rangeArray)
-	if rangeArrayLen == 2 {
-		ret.MinSalary, _ = strconv.ParseFloat(rangeArray[0], 64)
-		ret.MaxSalary, _ = strconv.ParseFloat(rangeArray[1], 64)
-	} else if rangeArrayLen == 1 { // Salary is not a range
-		ret.Salary, _ = strconv.ParseFloat(rangeArray[0], 64)
-	}
-
-	// Calculate yearly salary if its an hourly position
-	if (strings.Contains(salary, `hr`) || strings.Contains(salary, `hour`)) {
-		ret.CalculatedMinYearlySalary = ret.MinSalary * 40 * 52
-		ret.CalculatedMaxYearlySalary = ret.MaxSalary * 40 * 52
-		ret.CalculatedSalary = ret.Salary * 40 * 52
-	}
-
-	return ret
+	return salaryParser.Parse(salary)
 }
 
 func (dice *Dice) getJobTitle(doc *goquery.Document) string {
