@@ -11,24 +11,33 @@ import (
 	"reflect"
 )
 
-var esMutex sync.Mutex
-var hasSkill = make(map[string]bool)
+type Storage struct {
+	esMutex sync.Mutex
+	skills map[string]bool
+	searchClient *elastic.Client
+}
 
-func SearchHasSkill(client **elastic.Client, skill string) bool {
-	searchClient := *client
+func NewStorage(client **elastic.Client) Storage {
+	return Storage{
+		skills: make(map[string]bool),
+		searchClient: *client,
+	}
+}
 
-	ret, err := hasSkill[skill]
+func (r *Storage) HasSkill(skill string) bool {
+	searchClient := r.searchClient
+	ret, err := r.skills[skill]
 	if err == false {
-		esMutex.Lock()
+		r.esMutex.Lock()
 		searchQuery := elastic.NewTermQuery(`skill`, skill)
 		searchResult, err := searchClient.Search().
-			Index(`jobs`).
-			Type(`skills`).
-			Query(searchQuery).
-			Pretty(true).
-			Do()
+											Index(`jobs`).
+											Type(`skills`).
+											Query(searchQuery).
+											Pretty(true).
+											Do()
 
-		esMutex.Unlock()
+		r.esMutex.Unlock()
 
 		if err != nil {
 			panic(err)
@@ -37,31 +46,31 @@ func SearchHasSkill(client **elastic.Client, skill string) bool {
 		//fmt.Println(searchResult.TotalHits(), `SEARCHY`)
 
 		if searchResult.Hits.TotalHits > 0 {
-			hasSkill[skill] = true
+			r.skills[skill] = true
 		} else {
-			hasSkill[skill] = false
+			r.skills[skill] = false
 		}
 
-		ret = hasSkill[skill]
+		ret = r.skills[skill]
 	}
 
 	return ret
 }
 
-func SearchHasJobWithUrl(client **elastic.Client, url string) bool {
-	searchClient := *client
+func (r *Storage) HasJobWithUrl(url string) bool {
 
 	hasher := md5.New()
 	hasher.Write([]byte(url))
 	md5hash := hex.EncodeToString(hasher.Sum(nil))
 
-	esMutex.Lock()
-	rs, err := searchClient.Get().
+
+	r.esMutex.Lock()
+	rs, err := r.searchClient.Get().
 							Index(`jobs`).
 							Type(`job`).
 							Id(md5hash).
 							Do()
-	esMutex.Unlock()
+	r.esMutex.Unlock()
 
 	if err != nil {
 		return false
@@ -70,16 +79,20 @@ func SearchHasJobWithUrl(client **elastic.Client, url string) bool {
 	return rs.Found
 }
 
-func SearchAddSkill(client **elastic.Client, skill string) (bool, error) {
-	searchClient := *client
-	esMutex.Lock()
-	_, err := searchClient.Index().
+func (r *Storage) AddSkill(skill string) (bool, error) {
+	hasher := md5.New()
+	hasher.Write([]byte(skill))
+	md5hash := hex.EncodeToString(hasher.Sum(nil))
+
+	r.esMutex.Lock()
+	_, err := r.searchClient.Index().
 		Index(`jobs`).
 		Type(`skills`).
 		BodyString(`{"skill":"` + strings.Replace(skill, `"`, `\"`, -1) + `"}`).
+		Id(md5hash).
 		Refresh(true).
 		Do()
-	esMutex.Unlock()
+	r.esMutex.Unlock()
 
 	if err != nil {
 		return false, err
@@ -88,17 +101,15 @@ func SearchAddSkill(client **elastic.Client, skill string) (bool, error) {
 	return true, nil
 }
 
-func SearchAddJob(client **elastic.Client, job structures.JobDetail) {
-	searchClient := *client
-
+func (r *Storage) AddJob(job structures.JobDetail) {
 	hasher := md5.New()
 	hasher.Write([]byte(job.Link))
 	md5hash := hex.EncodeToString(hasher.Sum(nil))
 
-	fmt.Println(md5hash, "SSSS")
+	//fmt.Println(md5hash, "HASHY")
 
-	esMutex.Lock()
-	_, err := searchClient.
+	r.esMutex.Lock()
+	_, err := r.searchClient.
 						Index().
 						Index("jobs").
 						Type("job").
@@ -106,28 +117,26 @@ func SearchAddJob(client **elastic.Client, job structures.JobDetail) {
 						BodyJson(job).
 						Refresh(true).
 						Do()
-	esMutex.Unlock()
+	r.esMutex.Unlock()
 
 	if err != nil {
 		panic(err)
 	}
 }
 
-func SearchGetJobs(client **elastic.Client, search string, start int, end int) []structures.JobDetail {
+func (r *Storage) GetJobs(search string, start int, end int) []structures.JobDetail {
 	var ret []structures.JobDetail
 	var tmp structures.JobDetail
 
-	searchClient := *client
-
-	esMutex.Lock()
+	r.esMutex.Lock()
 	query := elastic.NewTermQuery(`skill`, search)
-	searchResult, _ := searchClient.Search().
+	searchResult, _ := r.searchClient.Search().
 								Index(`jobs`).
 								Type(`skills`).
 								Query(query).
 								Pretty(true).
 								Do()
-	esMutex.Unlock()
+	r.esMutex.Unlock()
 
 	for _, item := range searchResult.Each(reflect.TypeOf(tmp)) {
 		ret = append(ret, item.(structures.JobDetail))
@@ -136,18 +145,17 @@ func SearchGetJobs(client **elastic.Client, search string, start int, end int) [
 	return ret
 }
 
-func SearchGetSkills(client **elastic.Client, start int, end int) []map[string]string {
+func (r *Storage) GetSkills(start int, end int) []map[string]string {
 	ret := []map[string]string{}
-	searchClient := *client
 
-	esMutex.Lock()
-	searchResult, _ := searchClient.Search().
-		Index(`jobs`).
-		Type(`skills`).
-//		Query(searchQuery).
-		Pretty(true).
-		Do()
-	esMutex.Unlock()
+	r.esMutex.Lock()
+	searchResult, _ := r.searchClient.Search().
+									Index(`jobs`).
+									Type(`skills`).
+							//		Query(searchQuery).
+									Pretty(true).
+									Do()
+	r.esMutex.Unlock()
 
 	var tt map[string]string
 	for _, item := range searchResult.Each(reflect.TypeOf(tt)) {
@@ -155,20 +163,6 @@ func SearchGetSkills(client **elastic.Client, start int, end int) []map[string]s
 		break
 	}
 
-/*
-	fmt.Println(searchResult.TotalHits(), "ITS")
-	t := make(map[string]interface{})
-	for _, hit := range searchResult.Hits.Hits {
-		_ = json.Unmarshal(*hit.Source, tt)
-		fmt.Println(tt, string(*hit.Source))
-		ret = append(ret, t[`skill`].(string))
-
-	}
-
-
-*/
-
-	fmt.Println(ret)
 	return ret
 
 }

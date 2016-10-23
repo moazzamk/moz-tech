@@ -6,7 +6,6 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/moazzamk/moz-tech/service"
 	"github.com/moazzamk/moz-tech/structures"
-	"gopkg.in/olivere/elastic.v3"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -18,7 +17,7 @@ import (
 
 type StackOverflow struct {
 	JobWriter chan structures.JobDetail
-	Search    **elastic.Client
+	Storage   *service.Storage
 	Skills    []string
 	Url       string
 	Host      string
@@ -68,7 +67,7 @@ func (so *StackOverflow) dispatchJobs(doc *goquery.Document, jobChannel chan str
 		jobCount++
 		href, _ := s.Attr(`href`)
 
-		if service.SearchHasJobWithUrl(so.Search, href) {
+		if so.Storage.HasJobWithUrl(href) {
 			fmt.Println(`SO JOB INDEXED ALREADY ` + href)
 			return
 		}
@@ -104,7 +103,7 @@ func (so *StackOverflow) getDetails(jobWriterChannel chan structures.JobDetail, 
 			log.Fatal(err)
 		}
 
-		service.SearchHasJobWithUrl(so.Search, job.Link)
+		so.Storage.HasJobWithUrl(job.Link)
 
 		job.Telecommute, job.Travel = so.getTelecommuteAndTravel(doc)
 		job.Description = so.getJobDescription(doc)
@@ -241,6 +240,7 @@ func (so *StackOverflow) getJobType(doc *goquery.Document) []string {
 
 func (so *StackOverflow) getJobSkill(doc *goquery.Document) []string {
 	var tags []string
+	skillParser := service.NewSkillParser(so.Storage)
 
 	doc.Find(`.tags a.no-tag-menu`).Each(func(i int, s *goquery.Selection) {
 		tags = append(tags, s.Text())
@@ -250,173 +250,13 @@ func (so *StackOverflow) getJobSkill(doc *goquery.Document) []string {
 
 	//fmt.Println("SL", uniqueSlice, tags)
 
-	skills := so.processJobSkill(uniqueSlice)
+	skills := skillParser.ParseFromTags(uniqueSlice)
 
 	// Extract skills from description
 	description := so.getJobDescription(doc)
-	description = strings.ToLower(description)
-	descriptionSentences := strings.Split(description, `. `)
-	for i := range descriptionSentences {
-		tmpSkill := make(map[string]int)
-		tmp := strings.Split(descriptionSentences[i], ` `)
-		for j := range tmp {
-			tmp1 := strings.Trim(strings.Replace(tmp[j], `,`, ` `, -1), ` `)
-			if len([]rune(tmp1)) >= 3 {
-				tmp1 = strings.Trim(so.getNormalizedSkillSynonym(tmp1), ` `)
-				tmpSkill[tmp1] = 1
-			}
-		}
-
-		for j := range tmpSkill {
-			if !strings.Contains(j, ` `) && service.SearchHasSkill(so.Search, j) {
-				skills.Append(j)
-			}
-		}
-	}
+	skills = skills.Merge(skillParser.ParseFromDescription(description))
 
 	return skills.ToSlice()
 }
 
-func (so *StackOverflow) stopWord(subject string) {
 
-}
-
-func (so *StackOverflow) processJobSkill(skills *structures.UniqueSlice) *structures.UniqueSlice {
-	ret := skills
-
-	for index, value := range skills.ToSlice() {
-		tmp := strings.ToLower(strings.Trim(value, ` `))
-		tmp = so.getNormalizedSkillSynonym(tmp)
-		ret.Set(index, tmp)
-
-		// If skill is more than 1 word, then check if it has multiple skills listed
-		tmpSlice := strings.Split(tmp, ` `)
-		tmpSliceLen := len(tmpSlice)
-		for i := range tmpSlice {
-			searchHasSkill := service.SearchHasSkill(so.Search, tmpSlice[i])
-			if searchHasSkill {
-				ret.Append(tmpSlice[i])
-			}
-		}
-
-		// If the skill is one word and not present in our storage then add it
-
-		searchHasSkill := service.SearchHasSkill(so.Search, tmp)
-
-		if tmpSliceLen == 1 && !searchHasSkill {
-			_, err := service.SearchAddSkill(so.Search, tmp)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println(`Added skill ` + tmp)
-		}
-	}
-
-	return ret
-}
-
-// Correct all spellings, etc of the skill and normalize synonyms to 1 name
-func (so *StackOverflow) getNormalizedSkillSynonym(skill string) string {
-	ret := skill
-	synonyms := map[string][]string{
-		`mongo`: []string{
-			`mongodb`,
-			`mongo db`,
-		},
-		`redhat`: []string{
-			`red hat`,
-		},
-		`javascript`: []string{
-			`java script`,
-			`jafascript`,
-		},
-		`angular`: []string{
-			`angularjs`,
-			`angular.js`,
-			`angular js`,
-		},
-		`ember`: []string{
-			`ember.js`,
-			`emberjs`,
-		},
-		`mysql`: []string{
-			`my sql`,
-		},
-		`mssql`: []string{
-			`sql server`,
-			`ms server`,
-		},
-		`aws`: []string{
-			`amazon web services`,
-		},
-		`java`: []string{
-			`corejava`,
-			`core java`,
-			`java8`,
-		},
-		`nodejs`: []string{
-			`node js`,
-			`node.js`,
-		},
-		`bootstrap`: []string{
-			`boot strap`,
-		},
-		`bigdata`: []string{
-			`big data`,
-		},
-		`elasticsearch`: []string{
-			`elastic search`,
-		},
-		`machine_learning`: []string{
-			`machine learning`,
-		},
-		`cognitive_computing`: []string{
-			`cognitive computing`,
-		},
-		`cloud_computing`: []string{
-			`cloud computing`,
-		},
-		`data_warehouse`: []string{
-			`data warehouse design`,
-			`data warehouse`,
-			`data warehousing`,
-		},
-		`automated_testing`: []string{
-			`automation test`,
-		},
-		`data_mining`: []string{
-			`data mining`,
-		},
-
-		`predictive_analytics`: []string{
-			`predictive analytics`,
-		},
-		`version_control`: []string{
-			`version control`,
-			`vcs`,
-		},
-		`business_intelligence`: []string{
-			`business_intelligence`,
-			` bi `,
-			`bi `,
-		},
-		`azure`: []string{
-			`ms azure`,
-		},
-		`business_analysis`: []string{
-			`business analysis`,
-			`business analyst`,
-		},
-		`data_science`: []string{
-			`data science`,
-			`data scientist`,
-		},
-	}
-	for key, values := range synonyms {
-		for i := range values {
-			ret = strings.Replace(ret, values[i], key, -1)
-		}
-	}
-
-	return ret
-}

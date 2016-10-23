@@ -33,18 +33,20 @@ func main() {
 		panic(err)
 	}
 
+	fmt.Println(client, &client)
+
 	// Make sure ES works
 	_, _, err = client.Ping(esUrl).Do()
 	if err != nil {
 		panic(err)
 	}
 
-/*
-	_, err = client.DeleteByQuery().Index(`jobs`).Type(`job`).QueryString(`test`).Do()
-	if err != nil {
-		panic(err)
-	}
-*/
+	storage := service.NewStorage(&client)
+	skillParser := service.NewSkillParser(&storage)
+	salaryParser := service.SalaryParser{}
+	dateParser := service.DateParser{}
+
+
 	fmt.Println("Initialized")
 
 	jobDetailWriter := make(chan structures.JobDetail)
@@ -52,29 +54,36 @@ func main() {
 	go func(chan structures.JobDetail) {
 		for i := range jobDetailWriter {
 			fmt.Println(i)
-			service.SearchAddJob(&client, i)
+			storage.AddJob(i)
 		}
 	}(jobDetailWriter)
 
 	var doneChannels []chan bool
 	//doneChannels = append(doneChannels, startRemoteWork(&client, jobDetailWriter))
 	//doneChannels = append(doneChannels, startLinkedIn(&client, jobDetailWriter))
-	doneChannels = append(doneChannels, startDice(&client, jobDetailWriter))
-	//doneChannels = append(doneChannels, startStackOverflow(&client, jobDetailWriter))
+	doneChannels = append(doneChannels, startDice(&storage, &salaryParser, &skillParser, &dateParser, jobDetailWriter))
+	doneChannels = append(doneChannels, startStackOverflow(&storage, jobDetailWriter))
 
 	for i := range doneChannels {
 		_ = <-doneChannels[i]
 	}
 }
 
-func startDice(client **elastic.Client, JobDetailWriter chan structures.JobDetail) chan bool {
+func startDice(
+	storage *service.Storage,
+	salaryParser *service.SalaryParser,
+	skillParser *service.SkillParser,
+	dateParser *service.DateParser,
+	jobDetailWriter chan structures.JobDetail) chan bool {
+
 	var doneChannel = make(chan bool)
 
 	go func(doneChannel chan bool) {
-		worker := new(crawler.Dice)
+		worker := crawler.NewDiceCrawler(salaryParser, skillParser, dateParser)
 		worker.Url = `http://service.dice.com/api/rest/jobsearch/v1/simple.json?pgcnt=500&text=python`
-		worker.JobWriter = JobDetailWriter
-		worker.Search = client
+		worker.JobWriter = jobDetailWriter
+		worker.Storage = storage
+
 		worker.Crawl()
 
 		close(doneChannel)
@@ -103,7 +112,7 @@ func startLinkedIn(client **elastic.Client, jobWriter chan structures.JobDetail)
 }
 
 
-func startStackOverflow(client **elastic.Client, JobDetailWriter chan structures.JobDetail) chan bool {
+func startStackOverflow(storage *service.Storage, JobDetailWriter chan structures.JobDetail) chan bool {
 	var doneChannel = make(chan bool)
 
 	go func (doneChannel chan bool, jobDetailWriter chan structures.JobDetail) {
@@ -111,7 +120,7 @@ func startStackOverflow(client **elastic.Client, JobDetailWriter chan structures
 		worker.Url = `http://stackoverflow.com/jobs`
 		worker.Host = `http://stackoverflow.com/`
 		worker.JobWriter = JobDetailWriter
-		worker.Search = client
+		worker.Storage = storage
 
 		worker.Crawl()
 

@@ -4,26 +4,36 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"gopkg.in/olivere/elastic.v3"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"regexp"
 	"strings"
 	"github.com/moazzamk/moz-tech/service"
-	"sync"
-	"strconv"
-	"time"
 	"github.com/moazzamk/moz-tech/structures"
 )
 
-var wg sync.WaitGroup
-
 type Dice struct {
 	JobWriter chan structures.JobDetail
-	Search **elastic.Client
+	Storage *service.Storage
 	Skills []string
 	Url    string
+
+	salaryParser *service.SalaryParser
+	skillParser *service.SkillParser
+	dateParser *service.DateParser
+}
+
+func NewDiceCrawler(
+	salaryParser *service.SalaryParser,
+	skillParser *service.SkillParser,
+	dateParser *service.DateParser) *Dice {
+
+	dice := new(Dice)
+	dice.salaryParser = salaryParser
+	dice.skillParser = skillParser
+	dice.dateParser = dateParser
+
+	return dice
 }
 
 // Crawl() starts the crawling process. It is the only method anyone outside this object cares about
@@ -56,7 +66,7 @@ func (dice *Dice) Crawl() {
 
 			tmp := structures.JobDetail{}
 			tmp.Link = detailUrl
-			if service.SearchHasJobWithUrl(dice.Search, detailUrl) {
+			if dice.Storage.HasJobWithUrl(detailUrl) {
 				fmt.Println(`DICE JOB INDEXED ALREADY ` + detailUrl)
 				continue
 			}
@@ -199,31 +209,9 @@ func (dice *Dice) getPostedDate(doc *goquery.Document) string {
 
 	doc.Find(`.posted`).Each(func (i int, s *goquery.Selection) {
 		ret = s.Text()
-
-		if strings.Contains(ret, `ago`) {
-			re := regexp.MustCompile(`[0-9]+`)
-			match := re.FindString(ret)
-			sub, err := strconv.Atoi(match)
-			if err != nil {
-				ret = `Error parsing date ` + match
-			}
-
-			ts := time.Now()
-			if strings.Contains(ret, `day`) {
-				ts = ts.AddDate(0, 0, -1 * sub)
-
-			} else if strings.Contains(ret, `week`) {
-				ts = ts.AddDate(0, 0, -7 * sub)
-
-			} else {
-				ts = ts.AddDate(0, -1 * sub, 0)
-			}
-
-			ret = ts.String()
-		}
 	})
 
-	return ret
+	return dice.dateParser.Parse(ret)
 }
 
 func (dice *Dice) getJobType(doc *goquery.Document) []string {
@@ -246,177 +234,14 @@ func (dice *Dice) getJobSkill(doc *goquery.Document) []string {
 	})
 
 	uniqueSlice := structures.NewUniqueSlice(strings.Split(sss, `,`))
+	dice.skillParser.ParseFromTags(uniqueSlice)
 
-	//fmt.Println("SL", uniqueSlice, sss)
-
-	skills := dice.processJobSkill(uniqueSlice)
-
-	// Extract skills from description
 	description := dice.getJobDescription(doc)
-	description = strings.ToLower(description)
-	descriptionSentences := strings.Split(description, `. `)
-	for i := range descriptionSentences {
-		tmpSkill := make(map[string]int)
-		tmp := strings.Split(descriptionSentences[i], ` `)
-		for j := range tmp {
-			tmp1 := strings.Trim(strings.Replace(tmp[j], `,`, ` `, -1), ` `)
-			if len([]rune(tmp1)) >= 3 {
-				tmp1 = strings.Trim(dice.getNormalizedSkillSynonym(tmp1), ` `)
-				tmpSkill[tmp1] = 1
-			}
-		}
+	uniqueSlice = uniqueSlice.Merge(dice.skillParser.ParseFromDescription(description))
 
-		for j := range tmpSkill {
-			if !strings.Contains(j, ` `) && service.SearchHasSkill(dice.Search, j) {
-				skills.Append(j)
-			}
-		}
-	}
-
-	return skills.ToSlice()
+	return uniqueSlice.ToSlice()
 }
 
 func (dice *Dice) stopWord(subject string) {
 
-}
-
-func (dice *Dice) processJobSkill(skills *structures.UniqueSlice) *structures.UniqueSlice {
-	ret := skills
-
-	for index, value := range skills.ToSlice () {
-		tmp := strings.ToLower(strings.Trim(value, ` `))
-		tmp = dice.getNormalizedSkillSynonym(tmp)
-		ret.Set(index, tmp)
-
-		// If skill is more than 1 word, then check if it has multiple skills listed
-		tmpSlice := strings.Split(tmp, ` `)
-		tmpSliceLen := len(tmpSlice)
-		for i := range tmpSlice {
-			searchHasSkill := service.SearchHasSkill(dice.Search, tmpSlice[i])
-			if  searchHasSkill {
-				ret.Append(tmpSlice[i])
-			}
-		}
-
-		// If the skill is one word and not present in our storage then add it
-
-		searchHasSkill := service.SearchHasSkill(dice.Search, tmp)
-
-		if tmpSliceLen == 1 && ! searchHasSkill {
-			_, err := service.SearchAddSkill(dice.Search, tmp)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println(`Added skill ` + tmp)
-		}
-	}
-
-	return ret
-}
-
-// Correct all spellings, etc of the skill and normalize synonyms to 1 name
-func (dice *Dice) getNormalizedSkillSynonym(skill string) string {
-	ret := skill
-	synonyms := map[string][]string{
-		`mongo`: []string{
-			`mongodb`,
-			`mongo db`,
-		},
-		`redhat`: []string{
-			`red hat`,
-		},
-		`javascript`: []string{
-			`java script`,
-			`jafascript`,
-		},
-		`angular`: []string{
-			`angularjs`,
-			`angular.js`,
-			`angular js`,
-		},
-		`ember`: []string{
-			`ember.js`,
-			`emberjs`,
-		},
-		`mysql`: []string{
-			`my sql`,
-		},
-		`mssql`: []string{
-			`sql server`,
-			`ms server`,
-		},
-		`aws`: []string {
-			`amazon web services`,
-		},
-		`java`: []string{
-			`corejava`,
-			`core java`,
-			`java8`,
-		},
-		`nodejs`: []string{
-			`node js`,
-			`node.js`,
-		},
-		`bootstrap`: []string{
-			`boot strap`,
-		},
-		`bigdata`: []string{
-			`big data`,
-		},
-		`elasticsearch`: []string{
-			`elastic search`,
-		},
-		`machine_learning`: []string{
-			`machine learning`,
-		},
-		`cognitive_computing`: []string{
-			`cognitive computing`,
-		},
-		`cloud_computing`: []string{
-			`cloud computing`,
-		},
-		`data_warehouse`: []string{
-			`data warehouse design`,
-			`data warehouse`,
-			`data warehousing`,
-
-		},
-		`automated_testing`: []string{
-			`automation test`,
-		},
-		`data_mining`: []string{
-			`data mining`,
-		},
-
-		`predictive_analytics`: []string{
-			`predictive analytics`,
-		},
-		`version_control`: []string{
-			`version control`,
-			`vcs`,
-		},
-		`business_intelligence`: []string{
-			`business_intelligence`,
-			` bi `,
-			`bi `,
-		},
-		`azure`: []string{
-			`ms azure`,
-		},
-		`business_analysis`: []string{
-			`business analysis`,
-			`business analyst`,
-		},
-		`data_science`: []string{
-			`data science`,
-			`data scientist`,
-		},
-	}
-	for key, values := range synonyms {
-		for i := range values {
-			ret = strings.Replace(ret, values[i], key, -1)
-		}
-	}
-
-	return ret
 }
