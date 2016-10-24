@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+	"fmt"
 )
 
 type DateParser struct {
@@ -12,7 +13,8 @@ type DateParser struct {
 }
 
 func (r *DateParser) Parse(str string) string {
-	var ret string
+
+	ret := str
 
 	if strings.Contains(ret, `ago`) {
 		re := regexp.MustCompile(`[0-9]+`)
@@ -33,7 +35,7 @@ func (r *DateParser) Parse(str string) string {
 			ts = ts.AddDate(0, -1 * sub, 0)
 		}
 
-		ret = ts.String()
+		ret = fmt.Sprintf("%d-%d-%d", ts.Year(), ts.Month(), ts.Day())
 	}
 
 	return ret

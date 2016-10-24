@@ -32,6 +32,15 @@ func (slice *UniqueSlice) Append(item string) bool {
 	return true;
 }
 
+func (r *UniqueSlice) Merge(slice *UniqueSlice) *UniqueSlice {
+	ret := NewUniqueSlice(r.data)
+	for i := 0; i < slice.Length(); i++ {
+		ret.Append(slice.Get(i))
+	}
+
+	return ret
+}
+
 // Get the element at an index
 func (slice *UniqueSlice) Get(index int) string {
 	return slice.data[index]

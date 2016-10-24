@@ -179,4 +179,3 @@ func (r *SkillParser) getNormalizedSkillSynonym(skill string) string {
 
 	return ret
 }
-

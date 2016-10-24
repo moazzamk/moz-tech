@@ -3,12 +3,11 @@ package service
 import (
 	"github.com/moazzamk/moz-tech/structures"
 	"regexp"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 type SalaryParser struct {
-
 }
 
 func (r SalaryParser) Parse(str string) *structures.SalaryRange {
@@ -49,7 +48,6 @@ func (r SalaryParser) Parse(str string) *structures.SalaryRange {
 		ret.CalculatedMaxYearlySalary = ret.MaxSalary * 40 * 52
 		ret.CalculatedSalary = ret.Salary * 40 * 52
 	}
-
 
 	return ret
 }
