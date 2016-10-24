@@ -56,5 +56,38 @@ var _ = Describe("DateParser", func () {
 			Expect(dateParser.Parse("2 week ago")).To(Equal(tsString))
 		})
 
+		It("parses 'seconds ago' dates", func () {
+			ts := time.Now()
+			tsString := fmt.Sprintf("%d-%d-%d", ts.Year(), ts.Month(), ts.Day())
+
+			dateParser := DateParser{}
+			Expect(dateParser.Parse("2 secs ago")).To(Equal(tsString))
+		})
+
+		It("parses 'mins ago' dates", func () {
+			ts := time.Now()
+			tsString := fmt.Sprintf("%d-%d-%d", ts.Year(), ts.Month(), ts.Day())
+
+			dateParser := DateParser{}
+			Expect(dateParser.Parse("2 mins ago")).To(Equal(tsString))
+		})
+
+		It("parses 'hours ago' dates", func () {
+			ts := time.Now()
+			tsString := fmt.Sprintf("%d-%d-%d", ts.Year(), ts.Month(), ts.Day())
+
+			dateParser := DateParser{}
+			Expect(dateParser.Parse("2 hours ago")).To(Equal(tsString))
+		})
+
+		It("parses db dates", func () {
+			dateParser := DateParser{}
+			Expect(dateParser.Parse("2015-01-01")).To(Equal("2015-01-01"))
+		})
+
+		It("parses 'Oct 01, 2016' dates", func () {
+			dateParser := DateParser{}
+			Expect(dateParser.Parse("Oct 01, 2016")).To(Equal("2016-10-01"))
+		})
 	})
 })
