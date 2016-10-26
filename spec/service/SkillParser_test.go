@@ -8,9 +8,20 @@ import (
 	"testing"
 	//"github.com/moazzamk/moz-tech/structures"
 
+	"github.com/golang/mock/gomock"
+	"github.com/moazzamk/moz-tech/mock"
+	"github.com/moazzamk/moz-tech/structures"
 )
 
+var mockCtrl *gomock.Controller
+var storage *mock_service.MockStorage
+
 func TestSkillParser(t *testing.T) {
+
+	mockCtrl = gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	storage = mock_service.NewMockStorage(mockCtrl)
 
 	RegisterTestingT(t)
 	RegisterFailHandler(Fail)
@@ -20,32 +31,23 @@ func TestSkillParser(t *testing.T) {
 var _ = Describe("SkillParser", func () {
 	Context("parses skills from tags", func () {
 		It("parses abbreviated salaries", func () {
-/*			slice := structures.NewUniqueSlice([]string{
+			slice := structures.NewUniqueSlice([]string{
 				`Python`,
-				`MySQL`,
+/*				`MySQL`,
 				`DJango`,
 				`javascript`,
 				`ios`,
 				`android`,
 				`aws`,
-				`iot`,
+				`iot`,*/
 			})
-*/
+
+			storage.EXPECT().HasSkill(`python`).Return(true)
 
 
-//			skillParser := NewSkillParser()/
-//			rs := skillParser.ParseFromTags("95K")
-
-
+			skillParser := NewSkillParser(storage)
+			_ = skillParser.ParseFromTags(slice)
 		})
-
-		It("parses salaries with commas", func () {
-			salaryParser := SalaryParser{}
-			rs := salaryParser.Parse("95,000 ")
-
-			Expect(float64(rs.Salary)).To(Equal(float64(95000)))
-		})
-
 	})
 })
 

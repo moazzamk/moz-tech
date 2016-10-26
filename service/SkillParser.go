@@ -7,10 +7,10 @@ import (
 )
 
 type SkillParser struct {
-	Storage *Storage
+	Storage Storage
 }
 
-func NewSkillParser(storage *Storage) SkillParser {
+func NewSkillParser(storage Storage) SkillParser {
 	return SkillParser{storage}
 }
 

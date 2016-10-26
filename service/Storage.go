@@ -30,8 +30,8 @@ type ElasticSearchStorage struct {
 	searchClient *elastic.Client
 }
 
-func NewStorage(client *elastic.Client) *Storage {
-	ret := new(Storage)
+func NewStorage(client *elastic.Client) *ElasticSearchStorage {
+	ret := new(ElasticSearchStorage)
 	ret.skills =  make(map[string]bool)
 	ret.searchClient = client
 
