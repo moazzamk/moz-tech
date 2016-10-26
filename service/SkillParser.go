@@ -45,33 +45,29 @@ func (r *SkillParser) ParseFromDescription(description string) *structures.Uniqu
 }
 
 func (r *SkillParser) processJobSkill(skills *structures.UniqueSlice) *structures.UniqueSlice {
-	ret := skills
+	ret := structures.NewUniqueSlice([]string{})
 
-	for index, value := range skills.ToSlice() {
+	for _, value := range skills.ToSlice() {
 		tmp := strings.ToLower(strings.Trim(value, ` `))
 		tmp = r.getNormalizedSkillSynonym(tmp)
-		ret.Set(index, tmp)
+		ret.Append(tmp)
 
 		// If skill is more than 1 word, then check if it has multiple skills listed
 		tmpSlice := strings.Split(tmp, ` `)
+		tmpSlice = r.removeStopWords(tmpSlice)
 		tmpSliceLen := len(tmpSlice)
-		for i := range tmpSlice {
-			println(tmpSlice[i], `hhhhh`)
 
-			searchHasSkill := r.Storage.HasSkill(tmpSlice[i])
-			fmt.Println(59, ` skill `, tmpSlice[i], " ", searchHasSkill)
-			if searchHasSkill {
-				ret.Append(tmpSlice[i])
+		for i := range tmpSlice {
+			tmp1 := r.getNormalizedSkillSynonym(tmpSlice[i])
+			if r.Storage.HasSkill(tmp1) {
+				ret.Append(tmp1)
 			}
 		}
 
 		// If the skill is one word and not present in our storage then add it
 
-		println(tmp, tmpSlice)
-
-		searchHasSkill := r.Storage.HasSkill(tmp)
-		fmt.Println(68, searchHasSkill, " ", "|" + tmp + "|")
-		if tmpSliceLen == 1 && !searchHasSkill {
+		println(`SSSS`, tmp, tmpSlice)
+		if tmpSliceLen == 1 && !r.Storage.HasSkill(tmp) {
 			_, err := r.Storage.AddSkill(tmp)
 			if err != nil {
 				panic(err)
@@ -81,6 +77,37 @@ func (r *SkillParser) processJobSkill(skills *structures.UniqueSlice) *structure
 
 	return ret
 }
+
+/**
+ * Filter out stop words  from skills
+ */
+func (r *SkillParser) removeStopWords(skills []string) []string {
+	ret := []string{}
+	stopWords := []string{
+		`developer`,
+		`development`,
+		`programmer`,
+		`senior`,
+		`software`,
+		`on`,
+		`and`,
+		`or`,
+	}
+
+	stopWordsMap := make(map[string]bool)
+	for _, val := range stopWords {
+		stopWordsMap[val] = true
+	}
+
+	for i := 0; i < len(skills); i++ {
+		if _, ok := stopWordsMap[skills[i]]; !ok {
+			ret = append(ret, skills[i])
+		}
+	}
+
+	return ret
+}
+
 
 // Correct all spellings, etc of the skill and normalize synonyms to 1 name
 func (r *SkillParser) getNormalizedSkillSynonym(skill string) string {

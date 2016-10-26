@@ -34,7 +34,7 @@ func (dice *DiceTagCrawler) Crawl() {
 	url := dice.Url
 
 	// Start routines for getting job details
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 1; i++ {
 		go dice.getDetails(jobChannel)
 	}
 
@@ -96,10 +96,7 @@ func (dice *DiceTagCrawler) getDetails(jobChannel chan string) {
 			fmt.Println(err, "ERRRR")
 		}
 
-		skills := dice.getJobSkill(doc)
-		for _, skill := range skills {
-			dice.skillWriter <- skill
-		}
+		_ = dice.getJobSkill(doc)
 	}
 }
 

@@ -30,6 +30,9 @@ func main() {
 		panic(err)
 	}
 
+	//client.DeleteIndex(`jobs`).Do()
+	//client.CreateIndex(`jobs`).Do()
+
 	storage := service.NewStorage(client)
 	skillParser := service.NewSkillParser(storage)
 	//salaryParser := service.SalaryParser{}

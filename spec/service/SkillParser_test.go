@@ -30,11 +30,14 @@ func TestSkillParser(t *testing.T) {
 
 var _ = Describe("SkillParser", func () {
 	Context("parses skills from tags", func () {
-		It("parses abbreviated salaries", func () {
+		It("does nothing if skills already exist", func () {
 			slice := structures.NewUniqueSlice([]string{
-				`Python`,
-/*				`MySQL`,
-				`DJango`,
+				`Python `,
+				`MySQL `,
+				`Software`,
+				`software developer`,
+				`php python`,
+/*				`DJango`,
 				`javascript`,
 				`ios`,
 				`android`,
@@ -44,7 +47,43 @@ var _ = Describe("SkillParser", func () {
 
 			storage.EXPECT().HasSkill(`python`).Return(true)
 			storage.EXPECT().HasSkill(`python`).Return(true)
+			storage.EXPECT().HasSkill(`python`).Return(true)
+			storage.EXPECT().HasSkill(`python`).Return(true)
 
+			storage.EXPECT().HasSkill(`mysql`).Return(true)
+			storage.EXPECT().HasSkill(`mysql`).Return(true)
+			storage.EXPECT().HasSkill(`php`).Return(true)
+
+
+			skillParser := NewSkillParser(storage)
+			_ = skillParser.ParseFromTags(slice)
+		})
+
+		It(`splits compound skills and adds any pieces known to be skills`, func () {
+			slice := structures.NewUniqueSlice([]string{
+				`ruby on rails`,
+			})
+
+			storage.EXPECT().HasSkill(`ruby`).Return(false)
+			storage.EXPECT().HasSkill(`rails`).Return(true)
+
+			skillParser := NewSkillParser(storage)
+			val := skillParser.ParseFromTags(slice)
+
+			Expect(val.ToSlice()).To(HaveLen(2))
+		})
+
+		It(`learns skills from tags`, func () {
+			slice := structures.NewUniqueSlice([]string{
+				`DJango `,
+				`MySQL `,
+			})
+
+			storage.EXPECT().HasSkill(`django`).Return(false)
+			storage.EXPECT().HasSkill(`django`).Return(false)
+			storage.EXPECT().HasSkill(`mysql`).Return(true)
+			storage.EXPECT().HasSkill(`mysql`).Return(true)
+			storage.EXPECT().AddSkill(`django`)
 
 			skillParser := NewSkillParser(storage)
 			_ = skillParser.ParseFromTags(slice)

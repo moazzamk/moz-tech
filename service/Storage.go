@@ -68,11 +68,13 @@ func (r *ElasticSearchStorage) HasSkill(skill string) bool {
 		esMutex.Unlock()
 	}
 
+	fmt.Println(`YOYOMA`, skill, ret)
+
 	return ret
 }
 
 func (r *ElasticSearchStorage) AddSkill(skill string) (bool, error) {
-	id := r.getHash(skill)
+	id := r.getHash(strings.ToLower(skill))
 	esMutex.Lock()
 	_, err := r.searchClient.Index().
 							Index(`jobs`).
