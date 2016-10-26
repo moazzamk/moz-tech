@@ -18,7 +18,6 @@ type Storage interface {
 	HasSkill(string) bool
 	AddSkill(string) (bool, error)
 	HasJobWithUrl(string) bool
-	GetHash(string) string
 	AddJob(structures.JobDetail)
 	GetJobs(string, int, int) []structures.JobDetail
 	GetSkills(int, int) []map[string]string

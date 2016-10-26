@@ -43,6 +43,7 @@ var _ = Describe("SkillParser", func () {
 			})
 
 			storage.EXPECT().HasSkill(`python`).Return(true)
+			storage.EXPECT().HasSkill(`python`).Return(true)
 
 
 			skillParser := NewSkillParser(storage)

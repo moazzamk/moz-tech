@@ -56,6 +56,8 @@ func (r *SkillParser) processJobSkill(skills *structures.UniqueSlice) *structure
 		tmpSlice := strings.Split(tmp, ` `)
 		tmpSliceLen := len(tmpSlice)
 		for i := range tmpSlice {
+			println(tmpSlice[i], `hhhhh`)
+
 			searchHasSkill := r.Storage.HasSkill(tmpSlice[i])
 			fmt.Println(59, ` skill `, tmpSlice[i], " ", searchHasSkill)
 			if searchHasSkill {
@@ -64,6 +66,8 @@ func (r *SkillParser) processJobSkill(skills *structures.UniqueSlice) *structure
 		}
 
 		// If the skill is one word and not present in our storage then add it
+
+		println(tmp, tmpSlice)
 
 		searchHasSkill := r.Storage.HasSkill(tmp)
 		fmt.Println(68, searchHasSkill, " ", "|" + tmp + "|")

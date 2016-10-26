@@ -11,7 +11,7 @@ type CrawlJobsAction struct {
 	skillParser *service.SkillParser
 	dateParser *service.DateParser
 	config  *structures.Dictionary
-	storage *service.Storage
+	storage service.Storage
 
 	jobWriter chan structures.JobDetail
 }
@@ -21,7 +21,7 @@ func NewCrawlJobsAction(
 	skillParser *service.SkillParser,
 	dateParser *service.DateParser,
 	config *structures.Dictionary,
-	storage *service.Storage) *CrawlJobsAction {
+	storage service.Storage) *CrawlJobsAction {
 
 	jobWriter := make(chan structures.JobDetail)
 

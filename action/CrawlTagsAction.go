@@ -9,7 +9,7 @@ import (
 type CrawlTagsAction struct {
 	skillParser *service.SkillParser
 	config  *structures.Dictionary
-	storage *service.Storage
+	storage service.Storage
 
 	skillWriter chan string
 }
@@ -17,7 +17,7 @@ type CrawlTagsAction struct {
 func NewCrawlTagsAction(
 	skillParser *service.SkillParser,
 	config *structures.Dictionary,
-	storage *service.Storage) *CrawlTagsAction {
+	storage service.Storage) *CrawlTagsAction {
 
 	skillWriter := make(chan string)
 

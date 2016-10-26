@@ -14,7 +14,7 @@ import (
 
 type Dice struct {
 	JobWriter chan structures.JobDetail
-	Storage *service.Storage
+	Storage service.Storage
 	Skills []string
 	Url    string
 
