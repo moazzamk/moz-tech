@@ -8,14 +8,14 @@ import (
 	"testing"
 )
 
-func TestSalaryParser(t *testing.T) {
+func TestStorage(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "MozTech Suite")
 }
 
-var _ = Describe("SalaryParser", func () {
-	Context("parses fixed salaries", func () {
-		It("parses abbreviated salaries", func () {
+var _ = Describe("Storage", func () {
+	Context("stores stuff", func () {
+		It("something", func () {
 			salaryParser := SalaryParser{}
 			rs := salaryParser.Parse("95K")
 
@@ -28,7 +28,9 @@ var _ = Describe("SalaryParser", func () {
 
 			Expect(float64(rs.Salary)).To(Equal(float64(95000)))
 		})
-
 	})
 })
+
+
+
 

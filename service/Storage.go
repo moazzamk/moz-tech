@@ -13,7 +13,18 @@ import (
 
 var esMutex = &sync.Mutex{}
 
-type Storage struct {
+
+type Storage interface {
+	HasSkill(string) bool
+	AddSkill(string) (bool, error)
+	HasJobWithUrl(string) bool
+	GetHash(string) string
+	AddJob(structures.JobDetail)
+	GetJobs(string, int, int) []structures.JobDetail
+	GetSkills(int, int) []map[string]string
+}
+
+type ElasticSearchStorage struct {
 	esMutex      sync.Mutex
 	skills       map[string]bool
 	searchClient *elastic.Client
@@ -27,27 +38,30 @@ func NewStorage(client *elastic.Client) *Storage {
 	return ret
 }
 
-func (r *Storage) HasSkill(skill string) bool {
+func (r *ElasticSearchStorage) HasSkill(skill string) bool {
 	searchClient := r.searchClient
+	id := r.getHash(skill)
 
 	esMutex.Lock()
 	ret, found := r.skills[skill]
 	esMutex.Unlock()
 
+	fmt.Println(skill + ` slice `, found, " " + id)
+
 	if found == false {
 		esMutex.Lock()
 		_, err := searchClient.Get().
-			Index(`jobs`).
-			Type(`skills`).
-			Id(r.getHash(skill)).
-			Do()
+								Index(`jobs`).
+								Type(`skills`).
+								Id(id).
+								Do()
 
 		if err != nil {
 			r.skills[skill] = false
-			//fmt.Println(skill, `skill not in cachey`)
+			fmt.Println(skill, `skill not in cachey `, err )
 		} else {
 			r.skills[skill] = true
-			//fmt.Println(skill, `skill in cachey`)
+			fmt.Println(skill, `skill in cachey`)
 		}
 
 		ret = r.skills[skill]
@@ -58,7 +72,32 @@ func (r *Storage) HasSkill(skill string) bool {
 	return ret
 }
 
-func (r *Storage) HasJobWithUrl(url string) bool {
+func (r *ElasticSearchStorage) AddSkill(skill string) (bool, error) {
+	id := r.getHash(skill)
+	esMutex.Lock()
+	_, err := r.searchClient.Index().
+							Index(`jobs`).
+							Type(`skills`).
+							BodyString(`{"skill":"` + strings.Replace(skill, `"`, `\"`, -1) + `"}`).
+							Id(id).
+							Refresh(true).
+							Do()
+	esMutex.Unlock()
+
+	fmt.Println(`added`, skill)
+
+	if err != nil {
+		return false, err
+	}
+
+	esMutex.Lock()
+	r.skills[skill] = true
+	esMutex.Unlock()
+
+	return true, nil
+}
+
+func (r *ElasticSearchStorage) HasJobWithUrl(url string) bool {
 	md5hash := r.getHash(url)
 	esMutex.Lock()
 	rs, err := r.searchClient.Get().
@@ -75,7 +114,7 @@ func (r *Storage) HasJobWithUrl(url string) bool {
 	return rs.Found
 }
 
-func (r *Storage) getHash(str string) string {
+func (r *ElasticSearchStorage) getHash(str string) string {
 	hasher := md5.New()
 	hasher.Write([]byte(str))
 	md5hash := hex.EncodeToString(hasher.Sum(nil))
@@ -83,31 +122,7 @@ func (r *Storage) getHash(str string) string {
 	return md5hash
 }
 
-func (r *Storage) AddSkill(skill string) (bool, error) {
-	esMutex.Lock()
-	_, err := r.searchClient.Index().
-		Index(`jobs`).
-		Type(`skills`).
-		BodyString(`{"skill":"` + strings.Replace(skill, `"`, `\"`, -1) + `"}`).
-		Id(r.getHash(skill)).
-		Refresh(true).
-		Do()
-	esMutex.Unlock()
-
-	fmt.Println(`added`, skill)
-
-	if err != nil {
-		return false, err
-	}
-
-	esMutex.Lock()
-	r.skills[skill] = true
-	esMutex.Unlock()
-
-	return true, nil
-}
-
-func (r *Storage) AddJob(job structures.JobDetail) {
+func (r *ElasticSearchStorage) AddJob(job structures.JobDetail) {
 	md5hash := r.getHash(job.Link)
 	esMutex.Lock()
 	_, err := r.searchClient.
@@ -125,7 +140,7 @@ func (r *Storage) AddJob(job structures.JobDetail) {
 	}
 }
 
-func (r *Storage) GetJobs(search string, start int, end int) []structures.JobDetail {
+func (r *ElasticSearchStorage) GetJobs(search string, start int, end int) []structures.JobDetail {
 	var ret []structures.JobDetail
 	var tmp structures.JobDetail
 
@@ -146,7 +161,7 @@ func (r *Storage) GetJobs(search string, start int, end int) []structures.JobDet
 	return ret
 }
 
-func (r *Storage) GetSkills(start int, end int) []map[string]string {
+func (r *ElasticSearchStorage) GetSkills(start int, end int) []map[string]string {
 	ret := []map[string]string{}
 
 	esMutex.Lock()

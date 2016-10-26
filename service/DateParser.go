@@ -43,7 +43,7 @@ func (r *DateParser) Parse(str string) string {
 			`Jan 02, 2006`,
 		}
 
-		for format := range formats {
+		for _, format := range formats {
 			ts, err := time.Parse(format, str)
 			if err == nil {
 				return ts.Format(`2006-01-02`)

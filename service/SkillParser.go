@@ -3,6 +3,7 @@ package service
 import (
 	"github.com/moazzamk/moz-tech/structures"
 	"strings"
+	"fmt"
 )
 
 type SkillParser struct {
@@ -13,11 +14,12 @@ func NewSkillParser(storage *Storage) SkillParser {
 	return SkillParser{storage}
 }
 
-func (r SkillParser) ParseFromTags(tags *structures.UniqueSlice) *structures.UniqueSlice {
+func (r *SkillParser) ParseFromTags(tags *structures.UniqueSlice) *structures.UniqueSlice {
+	fmt.Println(`Parsing `, tags)
 	return r.processJobSkill(tags)
 }
 
-func (r SkillParser) ParseFromDescription(description string) *structures.UniqueSlice {
+func (r *SkillParser) ParseFromDescription(description string) *structures.UniqueSlice {
 	skills := structures.UniqueSlice{}
 	description = strings.ToLower(description)
 	descriptionSentences := strings.Split(description, `. `)
@@ -55,6 +57,7 @@ func (r *SkillParser) processJobSkill(skills *structures.UniqueSlice) *structure
 		tmpSliceLen := len(tmpSlice)
 		for i := range tmpSlice {
 			searchHasSkill := r.Storage.HasSkill(tmpSlice[i])
+			fmt.Println(59, ` skill `, tmpSlice[i], " ", searchHasSkill)
 			if searchHasSkill {
 				ret.Append(tmpSlice[i])
 			}
@@ -63,6 +66,7 @@ func (r *SkillParser) processJobSkill(skills *structures.UniqueSlice) *structure
 		// If the skill is one word and not present in our storage then add it
 
 		searchHasSkill := r.Storage.HasSkill(tmp)
+		fmt.Println(68, searchHasSkill, " ", "|" + tmp + "|")
 		if tmpSliceLen == 1 && !searchHasSkill {
 			_, err := r.Storage.AddSkill(tmp)
 			if err != nil {
