@@ -10,9 +10,15 @@ import (
 	"github.com/moazzamk/moz-tech/app"
 	"gopkg.in/olivere/elastic.v3"
 	"github.com/moazzamk/moz-tech/service"
+	"github.com/bgentry/que-go"
+	"github.com/jackc/pgx"
 )
 
-var templatePath = `/Users/moz/gosites/src/github.com/moazzamk/moz-tech/web/views`
+var (
+	templatePath = `/Users/moz/gosites/src/github.com/moazzamk/moz-tech/web/views`
+	qc      *que.Client
+	pgxpool *pgx.ConnPool
+)
 
 func main() {
 
@@ -60,8 +66,6 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
-
-
 	})
 
 	/**
