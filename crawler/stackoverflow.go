@@ -12,7 +12,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type StackOverflow struct {
@@ -21,6 +20,20 @@ type StackOverflow struct {
 	Skills    []string
 	Url       string
 	Host      string
+
+	salaryParser *service.SalaryParser
+	skillParser *service.SkillParser
+	dateParser *service.DateParser
+}
+
+func NewStackOverflowJobCrawler(salaryParser *service.SalaryParser, skillParser *service.SkillParser, dateParser *service.DateParser) *StackOverflow {
+	ret := StackOverflow{
+		salaryParser: salaryParser,
+		skillParser: skillParser,
+		dateParser: dateParser,
+	}
+
+	return &ret
 }
 
 // Crawl() starts the crawling process. It is the only method anyone outside this object cares about
@@ -33,7 +46,7 @@ func (r *StackOverflow) Crawl() {
 	fmt.Println(`URL: ` + url)
 
 	// Start routines for getting job details
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 25; i++ {
 		go r.getDetails(r.JobWriter, jobChannel, i)
 	}
 
@@ -55,11 +68,11 @@ func (r *StackOverflow) Crawl() {
 
 func (r *StackOverflow) getTotalJobs(doc *goquery.Document) int {
 	var totalJobs int
-	// Get total number of jobs
-	doc.Find(`#index-hed .description`).Each(func(i int, s *goquery.Selection) {
-		jobs := strings.Replace(s.Text(), " jobs", "", -1)
+
+	doc.Find(`span.js-search-title`).Each(func(i int, s *goquery.Selection) {
+		regex := regexp.MustCompile(`[0-9,]+`)
+		jobs := regex.FindString(s.Text())
 		jobs = strings.Replace(jobs, ",", "", -1)
-		jobs = strings.Replace(jobs, ` `, ``, -1)
 		totalJobs, _ = strconv.Atoi(jobs)
 	})
 
@@ -104,7 +117,7 @@ func (r *StackOverflow) getJobDescription(doc *goquery.Document) string {
 
 func (r *StackOverflow) getDetails(jobWriterChannel chan structures.JobDetail, jobChannel chan structures.JobDetail, i int) {
 	for job := range jobChannel {
-		fmt.Println(i, ` Starting`, job.Link)
+		//fmt.Println(i, ` Starting`, job.Link)
 		doc, err := goquery.NewDocument(job.Link)
 		if err != nil {
 			fmt.Println(err, "ERRRR")
@@ -126,7 +139,7 @@ func (r *StackOverflow) getDetails(jobWriterChannel chan structures.JobDetail, j
 		//fmt.Println(i, `job parse finished`)
 
 		r.JobWriter <- job
-		fmt.Println(i, ` Finsihed`, job.Link)
+		//fmt.Println(i, ` Finsihed`, job.Link)
 	}
 }
 
@@ -178,13 +191,12 @@ Get salary from the job posting and translate it to yearly salary
 if the salary isnt already yearly
 */
 func (r *StackOverflow) getSalaryRange(doc *goquery.Document) *structures.SalaryRange {
-	salaryParser := service.SalaryParser{}
 	var salary string
 	doc.Find(`.salary`).Each(func(i int, s *goquery.Selection) {
 		salary = s.Text()
 	})
 
-	return salaryParser.Parse(salary)
+	return r.salaryParser.Parse(salary)
 }
 
 func (r *StackOverflow) getJobTitle(doc *goquery.Document) string {
@@ -213,31 +225,9 @@ func (r *StackOverflow) getPostedDate(doc *goquery.Document) string {
 
 	doc.Find(`.posted`).Each(func(i int, s *goquery.Selection) {
 		ret = s.Text()
-
-		if strings.Contains(ret, `ago`) {
-			re := regexp.MustCompile(`[0-9]+`)
-			match := re.FindString(ret)
-			sub, err := strconv.Atoi(match)
-			if err != nil {
-				ret = `Error parsing date ` + match
-			}
-
-			ts := time.Now()
-			if strings.Contains(ret, `day`) {
-				ts = ts.AddDate(0, 0, -1*sub)
-
-			} else if strings.Contains(ret, `week`) {
-				ts = ts.AddDate(0, 0, -7*sub)
-
-			} else {
-				ts = ts.AddDate(0, -1*sub, 0)
-			}
-
-			ret = ts.String()
-		}
 	})
 
-	return ret
+	return r.dateParser.Parse(ret)
 }
 
 func (r *StackOverflow) getJobType(doc *goquery.Document) []string {
@@ -252,18 +242,17 @@ func (r *StackOverflow) getJobType(doc *goquery.Document) []string {
 
 func (r *StackOverflow) getJobSkill(doc *goquery.Document) []string {
 	var tags []string
-	skillParser := service.NewSkillParser(r.Storage)
 
 	doc.Find(`.tags a.no-tag-menu`).Each(func(i int, s *goquery.Selection) {
 		tags = append(tags, s.Text())
 	})
 
 	uniqueSlice := structures.NewUniqueSlice(tags)
-	skills := skillParser.ParseFromTags(uniqueSlice)
+	skills := r.skillParser.ParseFromTags(uniqueSlice)
 
 	// Extract skills from description
 	description := r.getJobDescription(doc)
-	skills = skills.Merge(skillParser.ParseFromDescription(description))
+	skills = skills.Merge(r.skillParser.ParseFromDescription(description))
 
 	return skills.ToSlice()
 }

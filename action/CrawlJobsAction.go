@@ -48,7 +48,7 @@ func (r *CrawlJobsAction) Run() {
 	//doneChannels = append(doneChannels, startRemoteWork(&client, jobDetailWriter))
 	//doneChannels = append(doneChannels, startLinkedIn(&client, jobDetailWriter))
 	doneChannels = append(doneChannels, r.startStackOverflow())
-	//doneChannels = append(doneChannels, r.startDice())
+	doneChannels = append(doneChannels, r.startDice())
 
 
 	for i := range doneChannels {
@@ -78,7 +78,7 @@ func (r *CrawlJobsAction) startStackOverflow() chan bool {
 	var doneChannel = make(chan bool)
 
 	go func(doneChannel chan bool, jobWriter chan structures.JobDetail) {
-		worker := new(crawler.StackOverflow)
+		worker := crawler.NewStackOverflowJobCrawler(r.salaryParser, r.skillParser, r.dateParser)
 		worker.Url = `http://stackoverflow.com/jobs`
 		worker.Host = `http://stackoverflow.com/`
 		worker.JobWriter = jobWriter

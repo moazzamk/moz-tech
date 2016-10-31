@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"github.com/moazzamk/moz-tech/service"
+	"regexp"
 )
 
 type StackOverflowTagCrawler struct {
@@ -35,7 +36,7 @@ func (r *StackOverflowTagCrawler) Crawl() {
 	fmt.Println(`URL: ` + url)
 
 	// Start routines for getting job details
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 25; i++ {
 		go r.getDetails(jobChannel)
 	}
 
@@ -43,7 +44,7 @@ func (r *StackOverflowTagCrawler) Crawl() {
 
 	totalJobs = r.getTotalJobs(doc)
 	if totalJobs <= 0 {
-		fmt.Println(`No jobs found`)
+		fmt.Println(`SO`, `No jobs found`)
 		return
 	}
 
@@ -53,6 +54,10 @@ func (r *StackOverflowTagCrawler) Crawl() {
 	for i := 2; jobCount > 0; i++ {
 		doc, _ = goquery.NewDocument(url + `?pg=` + strconv.Itoa(i))
 		jobCount = r.dispatchJobs(doc, jobChannel)
+
+		if i % 1000 == 0 {
+			fmt.Println(`SO`, i, `jobs done`)
+		}
 	}
 }
 
@@ -72,27 +77,25 @@ func (r *StackOverflowTagCrawler) dispatchJobs(doc *goquery.Document, jobChannel
 
 func (r *StackOverflowTagCrawler) getDetails(jobChannel chan string) {
 	for uri := range jobChannel {
-		fmt.Println(`Starting`, uri)
+		//fmt.Println(`SO`, `Starting`, uri)
 		doc, err := goquery.NewDocument(r.Host + uri)
 		if err != nil {
 			fmt.Println(err, "ERRRR")
 			log.Fatal(err)
 		}
 
-		skills := r.getJobSkill(doc)
-		for _, skill := range skills {
-			r.skillWriter <- skill
-		}
+		_ = r.getJobSkill(doc)
+
 	}
 }
 
 func (r *StackOverflowTagCrawler) getTotalJobs(doc *goquery.Document) int {
 	var totalJobs int
 
-	doc.Find(`#index-hed .description`).Each(func(i int, s *goquery.Selection) {
-		jobs := strings.Replace(s.Text(), " jobs", "", -1)
+	doc.Find(`span.js-search-title`).Each(func(i int, s *goquery.Selection) {
+		regex := regexp.MustCompile(`[0-9,]+`)
+		jobs := regex.FindString(s.Text())
 		jobs = strings.Replace(jobs, ",", "", -1)
-		jobs = strings.Replace(jobs, ` `, ``, -1)
 		totalJobs, _ = strconv.Atoi(jobs)
 	})
 

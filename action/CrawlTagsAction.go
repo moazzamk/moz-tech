@@ -4,7 +4,6 @@ import (
 	"github.com/moazzamk/moz-tech/structures"
 	"github.com/moazzamk/moz-tech/crawler"
 	"github.com/moazzamk/moz-tech/service"
-	"fmt"
 )
 
 type CrawlTagsAction struct {
@@ -34,7 +33,7 @@ func NewCrawlTagsAction(
 func (r *CrawlTagsAction) Run() {
 	go func(skillWriter chan string, storage service.Storage) {
 		for i := range skillWriter {
-			fmt.Println(`Adding `, i)
+			//fmt.Println(`Adding `, i)
 			storage.AddSkill(i)
 		}
 	}(r.skillWriter, r.storage)
@@ -42,7 +41,7 @@ func (r *CrawlTagsAction) Run() {
 	var doneChannels []chan bool
 	//doneChannels = append(doneChannels, startRemoteWork(&client, jobDetailWriter))
 	//doneChannels = append(doneChannels, startLinkedIn(&client, jobDetailWriter))
-	//doneChannels = append(doneChannels, r.startStackOverflow())
+	doneChannels = append(doneChannels, r.startStackOverflow())
 	doneChannels = append(doneChannels, r.startDice())
 
 	for i := range doneChannels {

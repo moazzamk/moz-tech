@@ -34,7 +34,7 @@ func (dice *DiceTagCrawler) Crawl() {
 	url := dice.Url
 
 	// Start routines for getting job details
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 25; i++ {
 		go dice.getDetails(jobChannel)
 	}
 
@@ -48,17 +48,24 @@ func (dice *DiceTagCrawler) Crawl() {
 
 	detailUrl := ``
 	nextUrl := ``
+	i := 0
 	for rs[`resultItemList`] != nil {
 		items := rs[`resultItemList`].([]interface{})
 		for _, item := range items {
 			obj := item.(map[string]interface{})
 			detailUrl = obj[`detailUrl`].(string)
 			jobChannel <- detailUrl
+			i++
 		}
 
 		if rs[`nextUrl`] == nil {
 			break
 		}
+
+		if i % 1000 == 0 {
+			fmt.Println("dice", i, "skills done")
+		}
+
 
 		nextUrl = rs[`nextUrl`].(string)
 		rs = dice.fetchSearchResults(`http://service.dice.com` + nextUrl)
@@ -81,7 +88,7 @@ func (dice *DiceTagCrawler) fetchSearchResults(url string) map[string]interface{
 
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		fmt.Println(`Could not decode response`, err)
+		fmt.Println(`dice`, `Could not decode response`, err)
 		return nil
 	}
 

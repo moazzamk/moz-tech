@@ -12,7 +12,7 @@ import (
 
 func TestDateParser(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "MozTech Suite")
+	RunSpecs(t, "DateParser")
 }
 
 var _ = Describe("DateParser", func () {
@@ -85,9 +85,16 @@ var _ = Describe("DateParser", func () {
 			Expect(dateParser.Parse("2015-01-01")).To(Equal("2015-01-01"))
 		})
 
-		It("parses 'Oct 01, 2016' dates", func () {
+		It("parses yesterday dates", func () {
+			ts := time.Now()
+			ret := ts.AddDate(0, 0, -1).Format(`2006-01-02`)
+
 			dateParser := DateParser{}
-			Expect(dateParser.Parse("Oct 01, 2016")).To(Equal("2016-10-01"))
+			Expect(dateParser.Parse(`
+					yesterday
+
+
+					`)).To(Equal(ret))
 		})
 	})
 })

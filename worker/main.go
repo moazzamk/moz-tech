@@ -9,39 +9,81 @@ import (
 	"syscall"
 	"encoding/json"
 	"github.com/jackc/pgx"
+	"github.com/moazzamk/moz-tech/service"
+	"github.com/moazzamk/moz-tech/action"
+	"gopkg.in/olivere/elastic.v3"
+	"github.com/moazzamk/moz-tech/structures"
 )
 
 
 var (
+	esClient *elastic.Client
+	config *structures.Dictionary
 	qc      *que.Client
 	pgxpool *pgx.ConnPool
 )
 
 // indexURLJob would do whatever indexing is necessary in the background
-func indexURLJob(j *que.Job) error {
-	var ir qe.IndexRequest
+func scanSkills(j *que.Job) error {
+	var ir moz_tech.ScanSkillsRequest
 	if err := json.Unmarshal(j.Args, &ir); err != nil {
-		return errors.Wrap(err, "Unable to unmarshal job arguments into IndexRequest: "+string(j.Args))
+		return err
 	}
+
+	storage := service.NewStorage(esClient)
+	skillParser := service.NewSkillParser(storage)
+	crawlAction := action.NewCrawlTagsAction(&skillParser, config, storage)
+
+	crawlAction.Run()
+
 
 	log.Println("IndexRequest", "Processing IndexRequest! (not really)")
 
 	return nil
 }
 
+func scanJobs(j *que.Job) error {
+	storage := service.NewStorage(esClient)
+	skillParser := service.NewSkillParser(storage)
+	crawlAction := action.NewCrawlTagsAction(&skillParser, config, storage)
+
+	crawlAction.Run()
+
+
+	log.Println("IndexRequest", "Processing IndexRequest! (not really)")
+
+	return nil
+
+}
+
 /**
  * Entry point for background workers
  */
 func main() {
-	config := moz_tech.NewAppConfig(`config/config.txt`)
-	pgxpool, qc, err := moz_tech.SetupDb(config["pgsql_url"])
+	config = moz_tech.NewAppConfig(`config/config.txt`)
+	pgUrl, _ := config.Get("psql_url")
+	esUrl, _ := config.Get("es_url")
+
+	var err error
+	esClient, err = elastic.NewClient(
+		elastic.SetURL(esUrl),
+		elastic.SetMaxRetries(10),
+		elastic.SetSniff(false),
+		elastic.SetScheme(`https`))
+
+	if err != nil {
+		panic(err)
+	}
+
+
+	pgxpool, qc, err :=	 moz_tech.SetupDb(pgUrl)
 	if err != nil {
 		log.Println("PSQL connection failed on workers")
 	}
 	defer pgxpool.Close()
 
 	wm := que.WorkMap{
-		moz_tech.IndexRequestJob: indexURLJob,
+		moz_tech.ScanSkillsJob: scanSkills,
 	}
 
 	workers := que.NewWorkerPool(qc, wm, 2)

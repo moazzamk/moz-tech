@@ -13,9 +13,14 @@ type DateParser struct {
 
 func (r *DateParser) Parse(str string) string {
 
-	ret := str
+	ret := `1900-01-01`
 
-	if strings.Contains(ret, `ago`) {
+	if strings.Contains(ret, `yesterday`) {
+		ts := time.Now()
+		ret = ts.AddDate(0, 0, -1).Format(`2006-01-02`)
+
+
+	} else if strings.Contains(ret, `ago`) {
 		re := regexp.MustCompile(`[0-9]+`)
 		match := re.FindString(ret)
 		sub, err := strconv.Atoi(match)

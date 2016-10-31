@@ -3,7 +3,7 @@ package service
 import (
 	"github.com/moazzamk/moz-tech/structures"
 	"strings"
-	"fmt"
+	"regexp"
 )
 
 type SkillParser struct {
@@ -15,7 +15,6 @@ func NewSkillParser(storage Storage) SkillParser {
 }
 
 func (r *SkillParser) ParseFromTags(tags *structures.UniqueSlice) *structures.UniqueSlice {
-	fmt.Println(`Parsing `, tags)
 	return r.processJobSkill(tags)
 }
 
@@ -53,12 +52,18 @@ func (r *SkillParser) processJobSkill(skills *structures.UniqueSlice) *structure
 		ret.Append(tmp)
 
 		// If skill is more than 1 word, then check if it has multiple skills listed
-		tmpSlice := strings.Split(tmp, ` `)
+		tmpSlice := strings.FieldsFunc(tmp, func (c rune) bool {
+			return c == ' ' || c == '/'
+		})
+		//fmt.Println(tmpSlice, tmp, "NNNNN")
 		tmpSlice = r.removeStopWords(tmpSlice)
 		tmpSliceLen := len(tmpSlice)
 
 		for i := range tmpSlice {
 			tmp1 := r.getNormalizedSkillSynonym(tmpSlice[i])
+
+			//fmt.Println(tmpSlice[i], tmp1, "TTTTTTT")
+
 			if r.Storage.HasSkill(tmp1) {
 				ret.Append(tmp1)
 			}
@@ -66,8 +71,8 @@ func (r *SkillParser) processJobSkill(skills *structures.UniqueSlice) *structure
 
 		// If the skill is one word and not present in our storage then add it
 
-		println(`SSSS`, tmp, tmpSlice)
-		if tmpSliceLen == 1 && !r.Storage.HasSkill(tmp) {
+		//println(`SSSS`, tmp, tmpSlice)
+		if tmpSliceLen == 1 && !r.Storage.HasSkill(tmp) && !strings.Contains(tmp, "/") {
 			_, err := r.Storage.AddSkill(tmp)
 			if err != nil {
 				panic(err)
@@ -123,6 +128,7 @@ func (r *SkillParser) getNormalizedSkillSynonym(skill string) string {
 		`javascript`: []string{
 			`java script`,
 			`jafascript`,
+			`[^j]*avascript`,
 		},
 		`angular`: []string{
 			`angularjs`,
@@ -205,10 +211,15 @@ func (r *SkillParser) getNormalizedSkillSynonym(skill string) string {
 			`data science`,
 			`data scientist`,
 		},
+		`postgres`: []string{
+			`postgresql`,
+			`pgsql`,
+		},
 	}
 	for key, values := range synonyms {
-		for i := range values {
-			ret = strings.Replace(ret, values[i], key, -1)
+		for _, v := range values {
+			regex := regexp.MustCompile(v)
+			ret = regex.ReplaceAllString(skill, key)
 		}
 	}
 

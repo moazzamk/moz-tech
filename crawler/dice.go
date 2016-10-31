@@ -42,20 +42,21 @@ func (dice *Dice) Crawl() {
 	url := dice.Url
 
 	// Start routines for getting job details
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 50; i++ {
 		go dice.getDetails(jobChannel)
 	}
 
-	fmt.Println(`URL: ` + url)
+	//fmt.Println(`URL: ` + url)
 
 	rs := dice.fetchSearchResults(url)
-	fmt.Println(`search results came back with `, rs["count"].(float64), " results")
+	fmt.Println(`DICE`, `search results came back with `, rs["count"].(float64), " results")
 
 	if rs[`lastDocument`].(float64) <= 0 {
 		fmt.Println(`No jobs found`)
 		return
 	}
 
+	i := 0
 	detailUrl := ``
 	nextUrl := ``
 	for rs[`resultItemList`] != nil {
@@ -71,6 +72,7 @@ func (dice *Dice) Crawl() {
 				continue
 			}
 
+			i++
 			jobChannel <- tmp
 		}
 
@@ -78,9 +80,13 @@ func (dice *Dice) Crawl() {
 			break
 		}
 
+		if i % 1000 == 0 {
+			fmt.Println(`DICE`, i, `jobs scanned`)
+		}
+
 		nextUrl = rs[`nextUrl`].(string)
 		rs = dice.fetchSearchResults(`http://service.dice.com` + nextUrl)
-		fmt.Println(`search results came back`)
+		//fmt.Println(`search results came back`)
 	}
 }
 
@@ -124,19 +130,20 @@ func (dice *Dice) getDetails(jobChannel chan structures.JobDetail) {
 			fmt.Println(err, "ERRRR")
 		}
 
-		var ret structures.JobDetail
-		ret.Telecommute, ret.Travel = dice.getTelecommuteAndTravel(doc)
-		ret.Description = dice.getJobDescription(doc)
-		ret.PostedDate = dice.getPostedDate(doc)
-		ret.Salary = dice.getSalaryRange(doc)
-		ret.Employer = dice.getEmployer(doc)
-		ret.Location = dice.getLocation(doc)
-		ret.Skills = dice.getJobSkill(doc)
-		ret.JobType = dice.getJobType(doc)
-		ret.Title = dice.getJobTitle(doc)
-		ret.Source = `dice.com`
+		
+		job.Telecommute, job.Travel = dice.getTelecommuteAndTravel(doc)
+		job.Description = dice.getJobDescription(doc)
+		job.PostedDate = dice.getPostedDate(doc)
+		job.Salary = dice.getSalaryRange(doc)
+		job.Employer = dice.getEmployer(doc)
+		job.Location = dice.getLocation(doc)
+		job.Skills = dice.getJobSkill(doc)
+		job.JobType = dice.getJobType(doc)
+		job.Title = dice.getJobTitle(doc)
+		job.Source = `dice.com`
 
-		dice.JobWriter <- ret
+		
+		dice.JobWriter <- job
 	}
 }
 

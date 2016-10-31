@@ -6,6 +6,7 @@ import (
 	"github.com/moazzamk/moz-tech/service"
 	"gopkg.in/olivere/elastic.v3"
 	"github.com/moazzamk/moz-tech/action"
+	"github.com/moazzamk/moz-tech/structures"
 )
 
 /*
@@ -35,17 +36,33 @@ func main() {
 
 	storage := service.NewStorage(client)
 	skillParser := service.NewSkillParser(storage)
-	//salaryParser := service.SalaryParser{}
-	//dateParser := service.DateParser{}
-	/*crawlAction := action.NewCrawlJobsAction(
-		&salaryParser,
-		&skillParser,
-		&dateParser,
+	salaryParser := service.SalaryParser{}
+	dateParser := service.DateParser{}
+
+
+	crawlJobs(&salaryParser, &skillParser, &dateParser, config, storage)
+	//crawlTags(&skillParser, config, storage)
+
+}
+
+func crawlJobs(
+	salaryParser *service.SalaryParser,
+	skillParser *service.SkillParser,
+	dateParser *service.DateParser,
+	config *structures.Dictionary,
+	storage service.Storage) {
+
+	action := action.NewCrawlJobsAction(
+		salaryParser,
+		skillParser,
+		dateParser,
 		config,
-		&storage)
-	*/
+		storage)
+	action.Run()
+}
 
-	crawlAction := action.NewCrawlTagsAction(&skillParser, config, storage)
 
+func crawlTags(skillParser *service.SkillParser, config *structures.Dictionary, storage service.Storage) {
+	crawlAction := action.NewCrawlTagsAction(skillParser, config, storage)
 	crawlAction.Run()
 }

@@ -37,12 +37,6 @@ var _ = Describe("SkillParser", func () {
 				`Software`,
 				`software developer`,
 				`php python`,
-/*				`DJango`,
-				`javascript`,
-				`ios`,
-				`android`,
-				`aws`,
-				`iot`,*/
 			})
 
 			storage.EXPECT().HasSkill(`python`).Return(true)
@@ -87,6 +81,27 @@ var _ = Describe("SkillParser", func () {
 
 			skillParser := NewSkillParser(storage)
 			_ = skillParser.ParseFromTags(slice)
+		})
+
+		It(`splits skills by / and learns the individual skills`, func () {
+
+			slice := structures.NewUniqueSlice([]string{
+				`abc/javascript `,
+				`polo `,
+			})
+
+			storage = mock_service.NewMockStorage(mockCtrl)
+			storage.EXPECT().HasSkill(`javascript`).Return(false)
+			storage.EXPECT().HasSkill(`polo`).Return(false)
+			storage.EXPECT().HasSkill(`polo`).Return(false)
+			storage.EXPECT().HasSkill(`abc`).Return(false)
+			storage.EXPECT().AddSkill(`javascript`)
+			storage.EXPECT().AddSkill(`polo`)
+			storage.EXPECT().AddSkill(`abc`)
+
+			skillParser := NewSkillParser(storage)
+			_ = skillParser.ParseFromTags(slice)
+
 		})
 	})
 })

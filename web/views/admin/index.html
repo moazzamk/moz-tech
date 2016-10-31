@@ -1,0 +1,36 @@
+<html>
+    <head>Admin</head>
+    <body>
+        <div ng-app="jobby">
+            <div ng-controller="AdminController">
+                <button ng-click="deleteIndex()">Delete Index</button>
+            </div>
+        </div>
+
+
+    </body>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+    <script type="text/javascript">
+        angular.module('jobby', [])
+                .factory('jaxy', ['$http', function ($http) {
+                    return {
+                        makeRequest: function (url, callback) {
+                            $http.get(url).then(function (response) {
+                                if (typeof callback == 'function') {
+                                    callback(response.data)
+                                }
+                            })
+                        }
+                    };
+
+                }])
+                .controller('AdminController', ['$scope', 'jaxy', function ($scope, jaxy) {
+                    $scope.deleteIndex = function () {
+                        jaxy.makeRequest('/index/delete')
+                    }
+                }])
+    </script>
+</html>
+
+
+

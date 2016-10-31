@@ -7,23 +7,54 @@ import (
 	"log"
 	"html/template"
 
+	"github.com/moazzamk/moz-tech/service"
 	"github.com/moazzamk/moz-tech/app"
 	"gopkg.in/olivere/elastic.v3"
-	"github.com/moazzamk/moz-tech/service"
 	"github.com/bgentry/que-go"
 	"github.com/jackc/pgx"
+
 )
 
 var (
 	templatePath = `/Users/moz/gosites/src/github.com/moazzamk/moz-tech/web/views`
 	qc      *que.Client
 	pgxpool *pgx.ConnPool
+	esClient *elastic.Client
 )
+
+// queueIndexRequest into the que as an encoded JSON object
+func queueIndexRequest(ir moz_tech.ScanSkillsRequest) error {
+	j := que.Job{
+		Type: moz_tech.ScanSkillsJob,
+		Args: []byte("{}"),
+	}
+
+	return qc.Enqueue(&j)
+}
+
+func queueScanJobsRequest(ir moz_tech.ScanJobsRequest) error {
+	j := que.Job{
+		Type: moz_tech.ScanJobsJob,
+	}
+
+	return qc.Enqueue(&j)
+}
+
 
 func main() {
 
 	config := moz_tech.NewAppConfig(`config/config.txt`)
 	esUrl, _ := config.Get(`es_url`)
+	pgUrl, _ := config.Get(`psql_url`)
+	var err error
+
+	pgxpool, qc, err =	 moz_tech.SetupDb(pgUrl)
+
+	fmt.Println(qc, "EEEEE")
+	if err != nil {
+		fmt.Println(err, "ERRRRRRRRRR")
+	}
+	defer pgxpool.Close()
 
 	fmt.Println(config)
 
@@ -45,19 +76,56 @@ func main() {
 		panic(err)
 	}
 
+	esClient = client
+
 	fmt.Println("Webserver Initialized")
+
 
 
 	mux := http.NewServeMux()
 
+		mux.Handle("/static", http.StripPrefix("/static/", http.FileServer(http.Dir("./public"))))
+
 	// Routes
+
+	mux.HandleFunc(`/index/delete`, func (rs http.ResponseWriter, rq *http.Request) {
+		esClient.DeleteIndex(`jobs`).Do()
+		esClient.CreateIndex(`jobs`).Do()
+
+		t := template.New(`index.html`)
+		t, _ = t.ParseFiles(templatePath + `/admin/index.html`)
+		err := t.Execute(rs, make(map[string]string))
+		if err != nil {
+			fmt.Println(err)
+		}
+	})
+
+	mux.HandleFunc(`/admin`, func (rs http.ResponseWriter, rq *http.Request) {
+
+		t := template.New(`index.html`)
+		t, _ = t.ParseFiles(templatePath + `/admin/index.html`)
+		err := t.Execute(rs, make(map[string]string))
+		if err != nil {
+			fmt.Println(err)
+		}
+
+	})
+
+	mux.HandleFunc(`/scan/skills`, func (rs http.ResponseWriter, rq *http.Request) {
+		queueIndexRequest(moz_tech.ScanSkillsRequest{})
+	})
+
+	mux.HandleFunc(`/scan/jobs`, func (rs http.ResponseWriter, rq *http.Request) {
+		queueScanJobsRequest(moz_tech.ScanJobsRequest{})
+	})
+
 
 	// Search jobs
 	mux.HandleFunc(`/search`, func (rs http.ResponseWriter, rq *http.Request) {
 		requestData := rq.URL.Query()
 
 		if query, ok := requestData[`q`]; ok {
-			service.SearchGetJobs(&client, query[0], 0, 10)
+			service.NewStorage(esClient).GetJobs(query[0], 0, 10)
 		}
 
 		t := template.New(`search.html`)
@@ -84,7 +152,7 @@ func main() {
 	 * List all skills
 	 */
 	mux.HandleFunc(`/skills`, func (rs http.ResponseWriter, rq *http.Request) {
-		rs1 := service.SearchGetSkills(&client, 0, 100)
+		rs1 := service.NewStorage(esClient).GetSkills(0, 100)
 
 		t := template.New(`list.html`)
 		t, _ = t.ParseFiles(templatePath + `/skills/list.html`)
