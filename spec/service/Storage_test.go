@@ -10,7 +10,7 @@ import (
 
 func TestStorage(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "MozTech Suite")
+	RunSpecs(t, "Storage Suite")
 }
 
 var _ = Describe("Storage", func () {

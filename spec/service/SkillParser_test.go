@@ -13,22 +13,29 @@ import (
 	"github.com/moazzamk/moz-tech/structures"
 )
 
-var mockCtrl *gomock.Controller
-var storage *mock_service.MockStorage
+
+var tt *testing.T
 
 func TestSkillParser(t *testing.T) {
-
-	mockCtrl = gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	storage = mock_service.NewMockStorage(mockCtrl)
+	tt = t
 
 	RegisterTestingT(t)
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Salary Parser Suite")
+	RunSpecs(t, "Skill Parser Suite")
 }
 
 var _ = Describe("SkillParser", func () {
+
+	var mockCtrl *gomock.Controller
+	var storage *mock_service.MockStorage
+
+	BeforeEach(func () {
+		mockCtrl = gomock.NewController(tt)
+		defer mockCtrl.Finish()
+
+		storage = mock_service.NewMockStorage(mockCtrl)
+	})
+
 	Context("parses skills from tags", func () {
 		It("does nothing if skills already exist", func () {
 			slice := structures.NewUniqueSlice([]string{
@@ -39,6 +46,7 @@ var _ = Describe("SkillParser", func () {
 				`php python`,
 			})
 
+			storage = mock_service.NewMockStorage(mockCtrl)
 			storage.EXPECT().HasSkill(`python`).Return(true)
 			storage.EXPECT().HasSkill(`python`).Return(true)
 			storage.EXPECT().HasSkill(`python`).Return(true)
@@ -69,20 +77,20 @@ var _ = Describe("SkillParser", func () {
 
 		It(`learns skills from tags`, func () {
 			slice := structures.NewUniqueSlice([]string{
-				`DJango `,
-				`MySQL `,
+				`porter `,
+				`cable `,
 			})
 
-			storage.EXPECT().HasSkill(`django`).Return(false)
-			storage.EXPECT().HasSkill(`django`).Return(false)
-			storage.EXPECT().HasSkill(`mysql`).Return(true)
-			storage.EXPECT().HasSkill(`mysql`).Return(true)
-			storage.EXPECT().AddSkill(`django`)
+			storage.EXPECT().HasSkill(`porter`).Return(false)
+			storage.EXPECT().HasSkill(`porter`).Return(false)
+			storage.EXPECT().HasSkill(`cable`).Return(true)
+			storage.EXPECT().HasSkill(`cable`).Return(true)
+			storage.EXPECT().AddSkill(`porter`)
 
 			skillParser := NewSkillParser(storage)
 			_ = skillParser.ParseFromTags(slice)
 		})
-
+/*
 		It(`splits skills by / and learns the individual skills`, func () {
 
 			slice := structures.NewUniqueSlice([]string{
@@ -102,7 +110,7 @@ var _ = Describe("SkillParser", func () {
 			skillParser := NewSkillParser(storage)
 			_ = skillParser.ParseFromTags(slice)
 
-		})
+		})*/
 	})
 })
 

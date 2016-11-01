@@ -15,27 +15,28 @@ func (r *DateParser) Parse(str string) string {
 
 	ret := `1900-01-01`
 
-	if strings.Contains(ret, `yesterday`) {
+	if strings.Contains(str, `yesterday`) {
 		ts := time.Now()
-		ret = ts.AddDate(0, 0, -1).Format(`2006-01-02`)
+		return ts.AddDate(0, 0, -1).Format(`2006-01-02`)
 
+	}
 
-	} else if strings.Contains(ret, `ago`) {
+	if strings.Contains(str, `ago`) {
 		re := regexp.MustCompile(`[0-9]+`)
-		match := re.FindString(ret)
+		match := re.FindString(str)
 		sub, err := strconv.Atoi(match)
 		if err != nil {
 			ret = `Error parsing date ` + match
 		}
 
 		ts := time.Now()
-		if strings.Contains(ret, `day`) {
+		if strings.Contains(str, `day`) {
 			ts = ts.AddDate(0, 0, -1 * sub)
 
-		} else if strings.Contains(ret, `week`) {
+		} else if strings.Contains(str, `week`) {
 			ts = ts.AddDate(0, 0, -7 * sub)
 
-		} else if strings.Contains(ret, `sec`) || strings.Contains(ret, `min`) || strings.Contains(ret, `hour`) {
+		} else if strings.Contains(str, `sec`) || strings.Contains(str, `min`) || strings.Contains(str, `hour`) {
 		} else {
 			ts = ts.AddDate(0, -1 * sub, 0)
 		}

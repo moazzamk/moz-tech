@@ -38,6 +38,17 @@ var _ = Describe("DateParser", func () {
 
 		})
 
+		It("ignores extra text", func () {
+
+			ts := time.Now()
+			ts = ts.AddDate(0, 0, -1 * 2)
+			tsString := fmt.Sprintf("%d-%d-%d", ts.Year(), ts.Month(), ts.Day())
+
+			dateParser := DateParser{}
+			Expect(dateParser.Parse("Posted 2 days ago")).To(Equal(tsString))
+
+		})
+
 		It("parses 'week ago' dates", func () {
 			ts := time.Now()
 			ts = ts.AddDate(0, 0, -1 * 7)
@@ -96,5 +107,6 @@ var _ = Describe("DateParser", func () {
 
 					`)).To(Equal(ret))
 		})
+
 	})
 })

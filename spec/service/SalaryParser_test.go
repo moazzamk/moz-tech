@@ -10,7 +10,7 @@ import (
 
 func TestSalaryParser(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "MozTech Suite")
+	RunSpecs(t, "Salary Parser Suite")
 }
 
 var _ = Describe("SalaryParser", func () {

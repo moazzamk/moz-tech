@@ -130,7 +130,6 @@ func (dice *Dice) getDetails(jobChannel chan structures.JobDetail) {
 			fmt.Println(err, "ERRRR")
 		}
 
-		
 		job.Telecommute, job.Travel = dice.getTelecommuteAndTravel(doc)
 		job.Description = dice.getJobDescription(doc)
 		job.PostedDate = dice.getPostedDate(doc)
@@ -141,7 +140,6 @@ func (dice *Dice) getDetails(jobChannel chan structures.JobDetail) {
 		job.JobType = dice.getJobType(doc)
 		job.Title = dice.getJobTitle(doc)
 		job.Source = `dice.com`
-
 		
 		dice.JobWriter <- job
 	}
