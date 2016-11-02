@@ -13,6 +13,7 @@ import (
 	"github.com/bgentry/que-go"
 	"github.com/jackc/pgx"
 
+	"os"
 )
 
 var (
@@ -100,6 +101,25 @@ func main() {
 		}
 	})
 
+	mux.HandleFunc(`/jobs/delete`, func (rs http.ResponseWriter, rq *http.Request) {
+		service := elastic.NewDeleteByQueryService(esClient)
+		service.Index(`jobs`)
+		service.Type(`job`)
+		service.QueryString(`stack`)
+		r1, err := service.Do()
+		if err != nil {
+			fmt.Println("hi", err)
+		}
+		fmt.Println(r1)
+
+		t := template.New(`index.html`)
+		t, _ = t.ParseFiles(templatePath + `/admin/index.html`)
+		err = t.Execute(rs, make(map[string]string))
+		if err != nil {
+			fmt.Println(err)
+		}
+	})
+
 	mux.HandleFunc(`/admin`, func (rs http.ResponseWriter, rq *http.Request) {
 
 		t := template.New(`index.html`)
@@ -178,8 +198,12 @@ func main() {
 	n := negroni.Classic()
 	n.UseHandler(mux)
 
+	portString := os.Getenv(`PORT`)
+	if portString == `` {
+		portString = `7000`
+	}
 	s := &http.Server{
-		Addr: ":7000",
+		Addr: ":" + portString,
 		Handler: n,
 		MaxHeaderBytes: 1 <<20,
 	}
