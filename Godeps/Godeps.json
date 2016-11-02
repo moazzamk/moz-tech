@@ -2,16 +2,11 @@
 	"ImportPath": "github.com/moazzamk/moz-tech",
 	"GoVersion": "go1.7",
 	"GodepVersion": "v74",
+	"Packages": [
+		"github.com/moazzamk/moz-tech/cmd/web",
+		"github.com/moazzamk/moz-tech/cmd/worker"
+	],
 	"Deps": [
-		{
-			"ImportPath": "github.com/PuerkitoBio/goquery",
-			"Comment": "v1.0.1-2-g152b1a2",
-			"Rev": "152b1a2c8f5d0340f658bb656032a39b94e52958"
-		},
-		{
-			"ImportPath": "github.com/andybalholm/cascadia",
-			"Rev": "1c31af6f6c1a7b101ed05aacc7d8a738b43ae86e"
-		},
 		{
 			"ImportPath": "github.com/bgentry/que-go",
 			"Rev": "113a82582641032af83fac74fae2a9f64800b927"
@@ -22,19 +17,16 @@
 			"Rev": "3734a92a71d7831b3c6ee7e4d9754a8dea5d9ab4"
 		},
 		{
+			"ImportPath": "github.com/urfave/negroni",
+			"Comment": "v0.2.0-65-g3f7ce7b",
+			"Rev": "3f7ce7b928e14ff890b067e5bbbc80af73690a9c"
+		},
+		{
 			"ImportPath": "golang.org/x/net/context",
 			"Rev": "f09c4662a0bd6bd8943ac7b4931e185df9471da4"
 		},
 		{
 			"ImportPath": "golang.org/x/net/context/ctxhttp",
-			"Rev": "f09c4662a0bd6bd8943ac7b4931e185df9471da4"
-		},
-		{
-			"ImportPath": "golang.org/x/net/html",
-			"Rev": "f09c4662a0bd6bd8943ac7b4931e185df9471da4"
-		},
-		{
-			"ImportPath": "golang.org/x/net/html/atom",
 			"Rev": "f09c4662a0bd6bd8943ac7b4931e185df9471da4"
 		},
 		{
