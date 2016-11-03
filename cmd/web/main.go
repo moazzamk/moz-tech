@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	templatePath = `/Users/moz/gosites/src/github.com/moazzamk/moz-tech/cmd/web/views`
+	templatePath = `/app/cmd/web/views`
 	qc      *que.Client
 	pgxpool *pgx.ConnPool
 	esClient *elastic.Client
