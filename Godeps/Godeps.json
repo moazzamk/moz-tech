@@ -3,7 +3,8 @@
 	"GoVersion": "go1.7",
 	"GodepVersion": "v74",
 	"Packages": [
-		"./..."
+		"github.com/moazzamk/moz-tech/cmd/worker",
+		"github.com/moazzamk/moz-tech/cmd/web"
 	],
 	"Deps": [
 		{
