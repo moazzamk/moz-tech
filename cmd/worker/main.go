@@ -13,6 +13,7 @@ import (
 	"github.com/moazzamk/moz-tech/action"
 	"gopkg.in/olivere/elastic.v3"
 	"github.com/moazzamk/moz-tech/structures"
+	"fmt"
 )
 
 
@@ -60,11 +61,22 @@ func scanJobs(j *que.Job) error {
  * Entry point for background workers
  */
 func main() {
-	config = moz_tech.NewAppConfig(`config/config.txt`)
-	pgUrl, _ := config.Get("psql_url")
-	esUrl, _ := config.Get("es_url")
-
+	var esUrl string
+	var pgUrl string
 	var err error
+
+	fmt.Println(`Starting worker`)
+
+	if os.Getenv(`SEARCHBOX_SSL_URL`) == `` {
+		config := moz_tech.NewAppConfig(`config/config.txt`)
+		esUrl, _ = config.Get(`es_url`)
+		pgUrl, _ = config.Get(`psql_url`)
+
+	} else {
+		esUrl = os.Getenv(`SEARCHBOX_SSL_URL`)
+		pgUrl = os.Getenv(`HEROKU_POSTGRESQL_AQUA_URL`)
+	}
+
 	esClient, err = elastic.NewClient(
 		elastic.SetURL(esUrl),
 		elastic.SetMaxRetries(10),
