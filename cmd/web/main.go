@@ -42,7 +42,7 @@ func queueScanJobsRequest(ir moz_tech.ScanJobsRequest) error {
 
 
 func main() {
-
+	fmt.Println(os.Environ())
 	config := moz_tech.NewAppConfig(`./../config/config.txt`)
 	esUrl, _ := config.Get(`es_url`)
 	pgUrl, _ := config.Get(`psql_url`)
