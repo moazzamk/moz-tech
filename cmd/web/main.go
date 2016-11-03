@@ -45,7 +45,11 @@ func main() {
 	var esUrl string
 	var pgUrl string
 	var err error
-	
+
+	fmt.Println(os.Environ())
+	fmt.Println(os.Getenv(`SEARCHBOX_SSL_URL`))
+
+
 	if os.Getenv(`SEARCHBOX_SSL_URL`) == `` {
 		config := moz_tech.NewAppConfig(`config/config.txt`)
 		esUrl, _ = config.Get(`es_url`)
@@ -65,8 +69,6 @@ func main() {
 		fmt.Println(err, "ERRRRRRRRRR")
 	}
 	defer pgxpool.Close()
-
-	fmt.Println(config)
 
 	// Initialize ES
 	// Keep sniffing to false. It causes ES library to fail
