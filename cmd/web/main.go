@@ -42,15 +42,21 @@ func queueScanJobsRequest(ir moz_tech.ScanJobsRequest) error {
 
 
 func main() {
-	configFile := `config/config.txt`
-	if os.Getenv(`HOME`) != `` {
-		configFile = os.Getenv(`HOME`) + `/config/config.txt`
+	var esUrl string
+	var pgUrl string
+	var err error
+	
+	if os.Getenv(`SEARCHBOX_SSL_URL`) == `` {
+		config := moz_tech.NewAppConfig(`config/config.txt`)
+		esUrl, _ = config.Get(`es_url`)
+		pgUrl, _ = config.Get(`psql_url`)
+
+	} else {
+		esUrl = os.Getenv(`SEARCHBOX_SSL_URL`)
+		pgUrl = os.Getenv(`HEROKU_POSTGRESQL_AQUA_URL`)
 	}
 
-	config := moz_tech.NewAppConfig(configFile)
-	esUrl, _ := config.Get(`es_url`)
-	pgUrl, _ := config.Get(`psql_url`)
-	var err error
+
 
 	pgxpool, qc, err =	 moz_tech.SetupDb(pgUrl)
 
