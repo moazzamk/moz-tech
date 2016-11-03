@@ -42,8 +42,12 @@ func queueScanJobsRequest(ir moz_tech.ScanJobsRequest) error {
 
 
 func main() {
-	fmt.Println(os.Environ())
-	config := moz_tech.NewAppConfig(`./../config/config.txt`)
+	configFile := `config/config.txt`
+	if os.Getenv(`HOME`) != `` {
+		configFile = os.Getenv(`HOME`) + `/config/config.txt`
+	}
+
+	config := moz_tech.NewAppConfig(configFile)
 	esUrl, _ := config.Get(`es_url`)
 	pgUrl, _ := config.Get(`psql_url`)
 	var err error
