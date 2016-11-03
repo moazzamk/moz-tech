@@ -12,7 +12,6 @@ import (
 	"gopkg.in/olivere/elastic.v3"
 	"github.com/bgentry/que-go"
 	"github.com/jackc/pgx"
-
 	"os"
 )
 
