@@ -86,6 +86,7 @@ func main() {
 	esClient = client
 
 	fmt.Println("Webserver Initialized")
+	fmt.Println("Template path:" + templatePath)
 
 
 
