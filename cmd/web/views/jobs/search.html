@@ -9,28 +9,41 @@
             padding: 2px 5px;
             border-radius: 2px;
         }
+        .job-source a {
+            color: #333333;
+        }
+        .search-input {
+            width: 400px;
+            line-height: 30px;
+            font-size: 25px;
+        }
+        .search-submit-btn {
+            border: none;
+            line-height: 30px;
+        }
+
 
     </style>
     <body ng-app="jobby" role="main" onsubmit="return false">
         <div ng-controller="SearchController">
             <form ng-submit="search()">
-                <input type="text" name="query" ng-model="query"/>
-                <input type="submit" value="GO"/>
+                <input type="text" name="query" class="search-input" ng-model="query" />
+                <input type="submit" value="GO" class="search-submit-btn"/>
             </form>
-
-            <div ng-click="search()">ddd</div>
 
 
             <ul>
                 <li ng-repeat="job in jobs">
-                    <b>{{"{{"}}job.Title{{"}}"}}</b>
-                    {{"{{"}}job.Location{{"}}"}}
-                    {{"{{"}}job.Skills{{"}}"}}
-                    {{"{{"}}job.MaxSalary{{"}}"}}
-                    {{"{{"}}job.CalculatedMaxSalary{{"}}"}}
-                    {{"{{"}}job.OriginalSalary{{"}}"}}
+                    <b>{{"{{job.Title}}"}}</b>
+                    {{"{{job.Location}}"}}
+                    {{"{{job.Skills}}"}}
+                    {{"{{job.MaxSalary}}"}}
+                    {{"{{job.CalculatedMaxSalary}}"}}
+                    {{"{{job.OriginalSalary}}"}}
 
-                    <div class="job-source">{{"{{"}}job.Source{{"}}"}}</div>
+                    <div class="job-source">
+                        <a href="{{"{{job.Link}}"}}">{{"{{"}}job.Source{{"}}"}}</a>
+                    </div>
                 </li>
             </ul>
 
@@ -41,6 +54,16 @@
 
     <script type="text/javascript">
         var app = angular.module('jobby', [])
+                    .directive('pagination', function () {
+                        return {
+                            restrict: 'AE',
+                            replace: true,
+                            template: '<div>hi{{"{{totalJobCount}}"}}</div>',
+                            link: function (scope, elem, attrs) {
+
+                            }
+                        };
+                    })
                     .factory('SearchService', ['$http', function ($http) {
                         return {
                             searchJobs: function (search, callback) {

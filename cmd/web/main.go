@@ -48,13 +48,13 @@ func main() {
 	var pgUrl string
 	var err error
 
+	templatePath = os.Getenv(`PWD`) + `/cmd/web/views`
 	if os.Getenv(`SEARCHBOX_SSL_URL`) == `` {
 		config := moz_tech.NewAppConfig(`config/config.txt`)
 		esUrl, _ = config.Get(`es_url`)
 		pgUrl, _ = config.Get(`psql_url`)
 
 	} else {
-		templatePath = os.Getenv(`HOME`) + `/cmd/web/views`
 		pgUrl = os.Getenv(`HEROKU_POSTGRESQL_AQUA_URL`)
 		esUrl = os.Getenv(`SEARCHBOX_SSL_URL`)
 
