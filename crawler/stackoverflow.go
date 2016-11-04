@@ -134,6 +134,7 @@ func (r *StackOverflow) getDetails(jobWriterChannel chan structures.JobDetail, j
 		job.Location = r.getLocation(doc)
 		job.Skills = r.getJobSkill(doc)
 		job.JobType = r.getJobType(doc)
+		job.Title = r.getJobTitle(doc)
 		job.Source = `stackoverflow.com`
 
 		//fmt.Println(i, `job parse finished`)
