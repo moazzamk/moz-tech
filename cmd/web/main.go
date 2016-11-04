@@ -50,13 +50,14 @@ func main() {
 
 	if os.Getenv(`SEARCHBOX_SSL_URL`) == `` {
 		config := moz_tech.NewAppConfig(`config/config.txt`)
-		templatePath = os.Getenv(`HOME`) + `/cmd/web/views`
 		esUrl, _ = config.Get(`es_url`)
 		pgUrl, _ = config.Get(`psql_url`)
 
 	} else {
-		esUrl = os.Getenv(`SEARCHBOX_SSL_URL`)
+		templatePath = os.Getenv(`HOME`) + `/cmd/web/views`
 		pgUrl = os.Getenv(`HEROKU_POSTGRESQL_AQUA_URL`)
+		esUrl = os.Getenv(`SEARCHBOX_SSL_URL`)
+
 	}
 
 	pgxpool, qc, err =	 moz_tech.SetupDb(pgUrl)
