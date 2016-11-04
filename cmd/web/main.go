@@ -53,7 +53,7 @@ func main() {
 		templatePath = os.Getenv(`HOME`) + `/cmd/web/views`
 		esUrl, _ = config.Get(`es_url`)
 		pgUrl, _ = config.Get(`psql_url`)
-		
+
 	} else {
 		esUrl = os.Getenv(`SEARCHBOX_SSL_URL`)
 		pgUrl = os.Getenv(`HEROKU_POSTGRESQL_AQUA_URL`)
