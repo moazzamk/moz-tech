@@ -13,10 +13,12 @@ import (
 	"github.com/bgentry/que-go"
 	"github.com/jackc/pgx"
 	"os"
+	"encoding/json"
+	"strconv"
 )
 
 var (
-	templatePath = `/app/cmd/web/views`
+	templatePath = `/Users/moz/gosites/src/github.com/moazzamk/moz-tech/cmd/web/views`
 	qc      *que.Client
 	pgxpool *pgx.ConnPool
 	esClient *elastic.Client
@@ -46,25 +48,18 @@ func main() {
 	var pgUrl string
 	var err error
 
-	fmt.Println(os.Environ())
-	fmt.Println(os.Getenv(`SEARCHBOX_SSL_URL`))
-
-
 	if os.Getenv(`SEARCHBOX_SSL_URL`) == `` {
 		config := moz_tech.NewAppConfig(`config/config.txt`)
+		templatePath = os.Getenv(`HOME`) + `/cmd/web/views`
 		esUrl, _ = config.Get(`es_url`)
 		pgUrl, _ = config.Get(`psql_url`)
-
+		
 	} else {
 		esUrl = os.Getenv(`SEARCHBOX_SSL_URL`)
 		pgUrl = os.Getenv(`HEROKU_POSTGRESQL_AQUA_URL`)
 	}
 
-
-
 	pgxpool, qc, err =	 moz_tech.SetupDb(pgUrl)
-
-	fmt.Println(qc, "EEEEE")
 	if err != nil {
 		fmt.Println(err, "ERRRRRRRRRR")
 	}
@@ -156,12 +151,30 @@ func main() {
 		requestData := rq.URL.Query()
 
 		if query, ok := requestData[`q`]; ok {
-			service.NewStorage(esClient).GetJobs(query[0], 0, 10)
+			start := 0
+			if val, ok := requestData[`start`]; ok {
+				start, _ = strconv.Atoi(val[0])
+			}
+			jobs, totalCount := service.NewStorage(esClient).GetJobs(query[0], start, 10)
+
+			rs1 := make(map[string]interface{})
+			rs1[`total`] = totalCount
+			rs1[`data`] = jobs
+			rs1[`success`] = 1
+
+			val, _ := json.Marshal(rs1)
+
+			rs.Write(val)
+			return
 		}
 
 		t := template.New(`search.html`)
-		t, _ = t.ParseFiles(templatePath + `/jobs/search.html`)
-		err := t.Execute(rs, make(map[string]string))
+		t, err := t.ParseFiles(templatePath + `/jobs/search.html`)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		err = t.Execute(rs, make(map[string]string))
 		if err != nil {
 			fmt.Println(err)
 		}

@@ -1,7 +1,59 @@
 <html>
-    <form action="/search" method="get">
-        <input type="text" name="query" />
-        <input type="submit" value="GO"/>
-    </form>
+    <style type="text/css">
+        .job-source {
+            background-color: #ddeeff;
+            display: inline;
+        }
+    </style>
+    <body ng-app="jobby" role="main" onsubmit="return false">
+        <div ng-controller="SearchController">
+            <form ng-submit="search()">
+                <input type="text" name="query" ng-model="query"/>
+                <input type="submit" value="GO"/>
+            </form>
 
+            <div ng-click="search()">ddd</div>
+
+
+            <ul>
+                <li ng-repeat="job in jobs">
+                    <b>{{"{{"}}job.Title{{"}}"}}</b>
+                    {{"{{"}}job.Location{{"}}"}}
+
+                    <div class="job-source">{{"{{"}}job.Source{{"}}"}}</div>
+                </li>
+            </ul>
+
+        </div>
+    </body>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+
+    <script type="text/javascript">
+        var app = angular.module('jobby', [])
+                    .factory('SearchService', ['$http', function ($http) {
+                        return {
+                            searchJobs: function (search, callback) {
+                                $http.get('/search?q=' + search)
+                                        .then(function (response) {
+                                            callback(response.data)
+                                        });
+                            }
+                        };
+                    }])
+                    .controller('SearchController', ['$scope', 'SearchService', function ($scope, searchService) {
+                        $scope.search = function () {
+                            console.log('hi');
+                            searchService.searchJobs($scope.query, function (data) {
+                                if (typeof data.success == 'undefined') {
+                                    console.log('data was unefined')
+                                    return;
+                                }
+
+                                $scope.jobs = data.data;
+                                $scope.totalJobCount = data.totalCount;
+                            })
+                        };
+                    }]);
+    </script>
 </html>

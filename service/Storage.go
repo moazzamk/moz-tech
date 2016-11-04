@@ -153,16 +153,18 @@ func (r *ElasticSearchStorage) RecoverAddJob( job structures.JobDetail) {
 	}
 }
 
-func (r *ElasticSearchStorage) GetJobs(search string, start int, end int) []structures.JobDetail {
+func (r *ElasticSearchStorage) GetJobs(search string, start int, end int) ([]structures.JobDetail, int64) {
 	var ret []structures.JobDetail
 	var tmp structures.JobDetail
 
 	esMutex.Lock()
-	query := elastic.NewTermQuery(`skill`, search)
+	query := elastic.NewQueryStringQuery(search)
 	searchResult, _ := r.searchClient.Search().
 		Index(`jobs`).
-		Type(`skills`).
+		Type(`job`).
 		Query(query).
+		From(start).
+		Size(end).
 		Pretty(true).
 		Do()
 	esMutex.Unlock()
@@ -171,7 +173,7 @@ func (r *ElasticSearchStorage) GetJobs(search string, start int, end int) []stru
 		ret = append(ret, item.(structures.JobDetail))
 	}
 
-	return ret
+	return ret, searchResult.TotalHits()
 }
 
 func (r *ElasticSearchStorage) GetSkills(start int, end int) []map[string]string {
