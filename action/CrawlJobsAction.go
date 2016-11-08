@@ -4,6 +4,7 @@ import (
 	"github.com/moazzamk/moz-tech/structures"
 	"github.com/moazzamk/moz-tech/crawler"
 	"github.com/moazzamk/moz-tech/service"
+	"fmt"
 )
 
 type CrawlJobsAction struct {
@@ -37,6 +38,7 @@ func NewCrawlJobsAction(
 }
 
 func (r *CrawlJobsAction) Run() {
+	fmt.Println(`JobsAction`, `started`)
 	go func(chan structures.JobDetail) {
 		for i := range r.jobWriter {
 			r.storage.AddJob(i)
@@ -47,8 +49,9 @@ func (r *CrawlJobsAction) Run() {
 	var doneChannels []chan bool
 	//doneChannels = append(doneChannels, startRemoteWork(&client, jobDetailWriter))
 	//doneChannels = append(doneChannels, startLinkedIn(&client, jobDetailWriter))
-	doneChannels = append(doneChannels, r.startStackOverflow())
-	doneChannels = append(doneChannels, r.startDice())
+	//doneChannels = append(doneChannels, r.startStackOverflow())
+	doneChannels = append(doneChannels, r.startIndeed())
+	//doneChannels = append(doneChannels, r.startDice())
 
 
 	for i := range doneChannels {
@@ -56,11 +59,29 @@ func (r *CrawlJobsAction) Run() {
 	}
 }
 
+func (r *CrawlJobsAction) startIndeed() chan bool {
+	fmt.Println(`JobsAction`, `starting indeed`)
+	var doneChannel = make(chan bool)
+	go func (doneChannel chan bool) {
+		worker := crawler.NewIndeedJobCrawler(
+			r.salaryParser,
+			r.skillParser,
+			r.dateParser)
+
+		worker.Url = `http://www.indeed.com/jobs?l=Remote`
+		worker.Storage = r.storage
+		worker.Crawl()
+	}(doneChannel)
+
+	return doneChannel
+}
+
 func (r *CrawlJobsAction) startDice() chan bool {
 
 	var doneChannel = make(chan bool)
 
 	go func(doneChannel chan bool) {
+		fmt.Println(`Starting indeed`)
 		worker := crawler.NewDiceCrawler(r.salaryParser, r.skillParser, r.dateParser)
 		worker.Url = `http://service.dice.com/api/rest/jobsearch/v1/simple.json?pgcnt=500&text=python`
 		worker.JobWriter = r.jobWriter
