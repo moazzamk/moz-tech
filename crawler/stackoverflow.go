@@ -137,7 +137,7 @@ func (r *StackOverflow) getDetails(jobWriterChannel chan structures.JobDetail, j
 		job.Title = r.getJobTitle(doc)
 		job.Source = `stackoverflow.com`
 
-		//fmt.Println(i, `job parse finished`)
+		fmt.Println(i, job.Title, `job parse finished`)
 
 		r.JobWriter <- job
 		//fmt.Println(i, ` Finsihed`, job.Link)
@@ -203,8 +203,10 @@ func (r *StackOverflow) getSalaryRange(doc *goquery.Document) *structures.Salary
 func (r *StackOverflow) getJobTitle(doc *goquery.Document) string {
 	var title string
 
-	doc.Find(`#jt`).Each(func(i int, s *goquery.Selection) {
-		title = s.Text()
+	doc.Find(`.detail-jobTitle`).Each(func(i int, s *goquery.Selection) {
+		title = strings.Trim(
+					strings.Trim(s.Text(), ` `),
+					"\n")
 	})
 
 	return title
