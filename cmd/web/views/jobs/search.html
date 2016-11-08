@@ -13,13 +13,19 @@
             color: #333333;
         }
         .search-input {
+            float: left;
+            margin-right: 10px;
             width: 400px;
             line-height: 30px;
             font-size: 25px;
         }
         .search-submit-btn {
+            float: left;
             border: none;
             line-height: 30px;
+        }
+        .clearfix {
+            clear: both
         }
 
 
@@ -30,19 +36,22 @@
                 <input type="text" name="query" class="search-input" ng-model="query" />
                 <input type="submit" value="GO" class="search-submit-btn"/>
             </form>
+            <div class="clearfix"></div>
 
-
+            <pagination current-page="{{start}}"
+                        total="{{totalJobCount}}"
+                        items-per-page="10" />
             <ul>
                 <li ng-repeat="job in jobs">
-                    <b>{{"{{job.Title}}"}}</b>
-                    {{"{{job.Location}}"}}
-                    {{"{{job.Skills}}"}}
-                    {{"{{job.MaxSalary}}"}}
-                    {{"{{job.CalculatedMaxSalary}}"}}
-                    {{"{{job.OriginalSalary}}"}}
+                    <b>{{job.Title}}</b>
+                    {{job.Location}}
+                    {{job.Skills}}
+                    {{job.MaxSalary}}
+                    {{job.CalculatedMaxSalary}}
+                    {{job.OriginalSalary}}
 
                     <div class="job-source">
-                        <a href="{{"{{job.Link}}"}}">{{"{{"}}job.Source{{"}}"}}</a>
+                        <a href="{{job.Link}}">{{job.Source}}</a>
                     </div>
                 </li>
             </ul>
@@ -87,6 +96,11 @@
                                 $scope.totalJobCount = data.totalCount;
                             })
                         };
+
+                        $scope.startSearch = function () {
+                            $scope.start = 0;
+                            $scope.search();
+                        }
                     }]);
     </script>
 </html>

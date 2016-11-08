@@ -96,7 +96,6 @@ func main() {
 		mux.Handle("/static", http.StripPrefix("/static/", http.FileServer(http.Dir("./public"))))
 
 	// Routes
-
 	mux.HandleFunc(`/index/delete`, func (rs http.ResponseWriter, rq *http.Request) {
 		esClient.DeleteIndex(`jobs`).Do()
 		esClient.CreateIndex(`jobs`).Do()
@@ -170,6 +169,20 @@ func main() {
 			return
 		}
 
+		f, err := os.Open(templatePath + `/jobs/search.html`)
+		if err != nil {
+			panic(`Could not load template`)
+		}
+
+		for true {
+			b1 := make([]byte, 5)
+			_, err = f.Read(b1)
+			if err != nil {
+				break
+			}
+			rs.Write(b1)
+		}
+/*
 		t := template.New(`search.html`)
 		t, err := t.ParseFiles(templatePath + `/jobs/search.html`)
 		if err != nil {
@@ -180,6 +193,7 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
+*/
 	})
 
 	/**
