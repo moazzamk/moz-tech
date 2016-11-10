@@ -149,7 +149,7 @@ func main() {
 			}
 
 			jobs, totalCount := service.NewStorage(esClient).GetJobs(query[0], start, 10)
-			fmt.Println(`NOOOOO`)
+			fmt.Println(`NOOOOO`, jobs)
 			rs1 := make(map[string]interface{})
 			rs1[`total`] = totalCount
 			rs1[`data`] = jobs
