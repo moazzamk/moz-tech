@@ -147,9 +147,9 @@ func main() {
 			if val, ok := requestData[`start`]; ok {
 				start, _ = strconv.Atoi(val[0])
 			}
-			fmt.Println(`HELLO`)
-			jobs, totalCount := service.NewStorage(esClient).GetJobs(query[0], start, 10)
 
+			jobs, totalCount := service.NewStorage(esClient).GetJobs(query[0], start, 10)
+			fmt.Println(`NOOOOO`)
 			rs1 := make(map[string]interface{})
 			rs1[`total`] = totalCount
 			rs1[`data`] = jobs
