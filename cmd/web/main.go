@@ -49,15 +49,14 @@ func main() {
 	var err error
 
 	templatePath = os.Getenv(`PWD`) + `/cmd/web/views`
-	if os.Getenv(`SEARCHBOX_SSL_URL`) == `` {
+	if os.Getenv(`ELASTICSEARCH_URL`) == `` {
 		config := moz_tech.NewAppConfig(`config/config.txt`)
 		esUrl, _ = config.Get(`es_url`)
 		pgUrl, _ = config.Get(`psql_url`)
 
 	} else {
-		pgUrl = os.Getenv(`HEROKU_POSTGRESQL_AQUA_URL`)
-		esUrl = os.Getenv(`SEARCHBOX_SSL_URL`)
-
+		pgUrl = os.Getenv(`DATABASE_URL`)
+		esUrl = os.Getenv(`ELASTICSEARCH_URL`)
 	}
 
 	pgxpool, qc, err =	 moz_tech.SetupDb(pgUrl)
