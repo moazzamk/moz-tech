@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"log"
 )
 
 var esMutex = &sync.Mutex{}
@@ -168,6 +169,8 @@ func (r *ElasticSearchStorage) GetJobs(search string, start int, end int) ([]str
 		Pretty(true).
 		Do()
 	esMutex.Unlock()
+
+	log.Println(searchResult, `RSSSS`)
 
 	for _, item := range searchResult.Each(reflect.TypeOf(tmp)) {
 		ret = append(ret, item.(structures.JobDetail))

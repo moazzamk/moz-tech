@@ -4,12 +4,10 @@
         <div ng-app="jobby">
             <div ng-controller="AdminController">
                 <button ng-click="deleteIndex()">Delete Index</button>
-
-                <button ng-click=""></button>
+                <button ng-click="scanSkills()">Scan skills</button>
+                <button ng-click="scanJobs()">Scan jobs</button>
             </div>
         </div>
-
-
     </body>
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
     <script type="text/javascript">
@@ -24,12 +22,19 @@
                             })
                         }
                     };
-
                 }])
                 .controller('AdminController', ['$scope', 'jaxy', function ($scope, jaxy) {
                     $scope.deleteIndex = function () {
-                        jaxy.makeRequest('/index/delete')
-                    }
+                        jaxy.makeRequest('/index/delete');
+                    };
+
+                    $scope.scanSkills = function () {
+                        jaxy.makeRequest('/scan/skills');
+                    };
+
+                    $scope.scanJobs = function () {
+                        jaxy.makeRequest('/scan/jobs');
+                    };
                 }])
     </script>
 </html>

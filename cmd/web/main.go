@@ -15,6 +15,7 @@ import (
 	"os"
 	"encoding/json"
 	"strconv"
+	"io/ioutil"
 )
 
 var (
@@ -146,8 +147,9 @@ func main() {
 			if val, ok := requestData[`start`]; ok {
 				start, _ = strconv.Atoi(val[0])
 			}
-			jobs, totalCount := service.NewStorage(esClient).GetJobs(query[0], start, 10)
 
+			jobs, totalCount := service.NewStorage(esClient).GetJobs(query[0], start, 10)
+			fmt.Println(`NOOOOO`, jobs)
 			rs1 := make(map[string]interface{})
 			rs1[`total`] = totalCount
 			rs1[`data`] = jobs
@@ -159,31 +161,8 @@ func main() {
 			return
 		}
 
-		f, err := os.Open(templatePath + `/jobs/search.html`)
-		if err != nil {
-			panic(`Could not load template`)
-		}
-
-		for true {
-			b1 := make([]byte, 5)
-			_, err = f.Read(b1)
-			if err != nil {
-				break
-			}
-			rs.Write(b1)
-		}
-/*
-		t := template.New(`search.html`)
-		t, err := t.ParseFiles(templatePath + `/jobs/search.html`)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		err = t.Execute(rs, make(map[string]string))
-		if err != nil {
-			fmt.Println(err)
-		}
-*/
+		f, _ := ioutil.ReadFile(templatePath + `/jobs/search.html`)
+		rs.Write(f)
 	})
 
 	/**
