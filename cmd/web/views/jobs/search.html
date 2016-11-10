@@ -12,6 +12,13 @@
         .job-source a {
             color: #333333;
         }
+        .pagination {
+            list-style-type: none;
+        }
+        .pagination li {
+            margin-right: 10px;
+            float: left;
+        }
         .search-input {
             float: left;
             margin-right: 10px;
@@ -29,9 +36,6 @@
         .clearfix {
             clear: both;
         }
-
-
-
     </style>
     <body ng-app="jobby" role="main" onsubmit="return false">
         <div ng-controller="SearchController">
@@ -48,9 +52,9 @@
                     start="start"
                     size="10"
                     query="query"
-                    setScoped="setScopey()"/>
+                    setScoped="setScopey()"></pagination>
 
-            <ul>
+            <ul >
                 <li ng-repeat="job in jobs">
                     <b>{{job.Title}}</b>
                     {{job.Location}}
@@ -86,7 +90,7 @@
                         .directive('pagination', function () {
                             console.log(78, arguments);
                             return {
-                                restrict: 'AE',
+                                restrict: 'E',
                                 transclude: true,
                                 replace: true,
                                 scope: {
@@ -96,9 +100,9 @@
                                     start: '=start',
                                     setScopey: '&'
                                 },
-                                template: '<div>' +
-                                    'Y{{pages}} A{{totalCount}}<div ng-repeat="i in [] | range:pages"><a href=\'#\' ng-click=\'setScoped()\'>{{i+1}}</a></div>' +
-                                '</div>',
+                                template: '<div>Total: {{totalCount}}<ul class="pagination">' +
+                                    '<li ng-repeat="i in [] | range:pages"><a href=\'#\' ng-click=\'setScoped()\'>{{i+1}}</a></li></ul>' +
+                                '<div class="clearfix"></div></div>',
 
                                 link: function (scope) {
                                     console.log(scope.setScoped, 'hhh');
@@ -132,7 +136,7 @@
                             }
                             searchService.searchJobs($scope.query, $scope.start, function (data) {
                                 if (typeof data.success == 'undefined') {
-                                    console.log('data was undefined')
+                                    console.log('data was undefined');
                                     return;
                                 }
 
