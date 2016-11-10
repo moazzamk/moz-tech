@@ -13,7 +13,6 @@ import (
 	"github.com/moazzamk/moz-tech/action"
 	"gopkg.in/olivere/elastic.v3"
 	"github.com/moazzamk/moz-tech/structures"
-	"fmt"
 )
 
 
