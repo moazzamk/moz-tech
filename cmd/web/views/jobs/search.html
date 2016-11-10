@@ -18,6 +18,8 @@
             width: 400px;
             line-height: 30px;
             font-size: 25px;
+            float: left;
+            margin-right: 10px;
         }
         .search-submit-btn {
             float: left;
@@ -25,22 +27,29 @@
             line-height: 30px;
         }
         .clearfix {
-            clear: both
+            clear: both;
         }
+
 
 
     </style>
     <body ng-app="jobby" role="main" onsubmit="return false">
         <div ng-controller="SearchController">
-            <form ng-submit="search()">
+            <form ng-submit="startSearch()">
                 <input type="text" name="query" class="search-input" ng-model="query" />
                 <input type="submit" value="GO" class="search-submit-btn"/>
+                <div class="clearfix"></div>
             </form>
             <div class="clearfix"></div>
 
-            <pagination current-page="{{start}}"
-                        total="{{totalJobCount}}"
-                        items-per-page="10" />
+
+            <pagination
+                    total="totalJobCount"
+                    start="start"
+                    size="10"
+                    query="query"
+                    setScoped="setScopey()"/>
+
             <ul>
                 <li ng-repeat="job in jobs">
                     <b>{{job.Title}}</b>
@@ -63,20 +72,48 @@
 
     <script type="text/javascript">
         var app = angular.module('jobby', [])
-                    .directive('pagination', function () {
-                        return {
-                            restrict: 'AE',
-                            replace: true,
-                            template: '<div>hi{{"{{totalJobCount}}"}}</div>',
-                            link: function (scope, elem, attrs) {
+                        .filter('range', function() {
+                            return function(input, total) {
+                                total = parseInt(total);
 
-                            }
-                        };
+                                for (var i=0; i<total; i++) {
+                                    input.push(i);
+                                }
+
+                                return input;
+                            };
+                        })
+                        .directive('pagination', function () {
+                            console.log(78, arguments);
+                            return {
+                                restrict: 'AE',
+                                transclude: true,
+                                replace: true,
+                                scope: {
+                                    totalCount: '=total',
+                                    itemsPerPage: '=size',
+                                    query: '=query',
+                                    start: '=start',
+                                    setScopey: '&'
+                                },
+                                template: '<div>' +
+                                    'Y{{pages}} A{{totalCount}}<div ng-repeat="i in [] | range:pages"><a href=\'#\' ng-click=\'setScoped()\'>{{i+1}}</a></div>' +
+                                '</div>',
+
+                                link: function (scope) {
+                                    console.log(scope.setScoped, 'hhh');
+                                    scope.$watch('totalCount', function () {
+                                        console.log(scope.setScoped);
+
+                                        scope.pages = Math.ceil(scope.totalCount / scope.itemsPerPage);
+                                    });
+                                }
+                            };
                     })
                     .factory('SearchService', ['$http', function ($http) {
                         return {
-                            searchJobs: function (search, callback) {
-                                $http.get('/search?q=' + search)
+                            searchJobs: function (search, start, callback) {
+                                $http.get('/search?q=' + search + '&start=' + start)
                                         .then(function (response) {
                                             callback(response.data)
                                         });
@@ -84,21 +121,29 @@
                         };
                     }])
                     .controller('SearchController', ['$scope', 'SearchService', function ($scope, searchService) {
+                        $scope.startSearch = function () {
+                            $scope.start = 0;
+                            $scope.search();
+                        };
+
                         $scope.search = function () {
-                            console.log('hi');
-                            searchService.searchJobs($scope.query, function (data) {
+                            if (!$scope.start) {
+                                $scope.start = 0;
+                            }
+                            searchService.searchJobs($scope.query, $scope.start, function (data) {
                                 if (typeof data.success == 'undefined') {
-                                    console.log('data was unefined')
+                                    console.log('data was undefined')
                                     return;
                                 }
 
+                                $scope.totalJobCount = data.total;
                                 $scope.jobs = data.data;
-                                $scope.totalJobCount = data.totalCount;
                             })
                         };
 
-                        $scope.startSearch = function () {
-                            $scope.start = 0;
+                        $scope.setScopey = function (start) {
+                            console.log('setty');
+                            $scope.start = start;
                             $scope.search();
                         }
                     }]);
