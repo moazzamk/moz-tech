@@ -25,7 +25,7 @@ var (
 )
 
 // queueIndexRequest into the que as an encoded JSON object
-func queueIndexRequest(ir moz_tech.ScanSkillsRequest) error {
+func queueScanSkillsRequest(ir moz_tech.ScanSkillsRequest) error {
 	j := que.Job{
 		Type: moz_tech.ScanSkillsJob,
 		Args: []byte("{}"),
@@ -44,21 +44,10 @@ func queueScanJobsRequest(ir moz_tech.ScanJobsRequest) error {
 
 
 func main() {
-	var esUrl string
-	var pgUrl string
 	var err error
 
+	esUrl, pgUrl := moz_tech.GetConfigVars()
 	templatePath = os.Getenv(`PWD`) + `/cmd/web/views`
-	if os.Getenv(`ELASTICSEARCH_URL`) == `` {
-		config := moz_tech.NewAppConfig(`config/config.txt`)
-		esUrl, _ = config.Get(`es_url`)
-		pgUrl, _ = config.Get(`psql_url`)
-
-	} else {
-		pgUrl = os.Getenv(`DATABASE_URL`)
-		esUrl = os.Getenv(`ELASTICSEARCH_URL`)
-	}
-
 	pgxpool, qc, err =	 moz_tech.SetupDb(pgUrl)
 	if err != nil {
 		fmt.Println(err, "ERRRRRRRRRR")
@@ -140,7 +129,7 @@ func main() {
 	})
 
 	mux.HandleFunc(`/scan/skills`, func (rs http.ResponseWriter, rq *http.Request) {
-		queueIndexRequest(moz_tech.ScanSkillsRequest{})
+		queueScanSkillsRequest(moz_tech.ScanSkillsRequest{})
 	})
 
 	mux.HandleFunc(`/scan/jobs`, func (rs http.ResponseWriter, rq *http.Request) {

@@ -37,8 +37,7 @@ func scanSkills(j *que.Job) error {
 
 	crawlAction.Run()
 
-
-	log.Println("IndexRequest", "Processing IndexRequest! (not really)")
+	log.Println("IndexRequest", "Processing Scan skills!")
 
 	return nil
 }
@@ -61,21 +60,9 @@ func scanJobs(j *que.Job) error {
  * Entry point for background workers
  */
 func main() {
-	var esUrl string
-	var pgUrl string
 	var err error
 
-	fmt.Println(`Starting worker`)
-
-	if os.Getenv(`ELASTICSEARCH_URL`) == `` {
-		config := moz_tech.NewAppConfig(`config/config.txt`)
-		esUrl, _ = config.Get(`es_url`)
-		pgUrl, _ = config.Get(`psql_url`)
-
-	} else {
-		pgUrl = os.Getenv(`DATABASE_URL`)
-		esUrl = os.Getenv(`ELASTICSEARCH_URL`)
-	}
+	esUrl, pgUrl := moz_tech.GetConfigVars()
 	esClient, err = elastic.NewClient(
 		elastic.SetURL(esUrl),
 		elastic.SetMaxRetries(10),
@@ -85,7 +72,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 
 	pgxpool, qc, err :=	 moz_tech.SetupDb(pgUrl)
 	if err != nil {
