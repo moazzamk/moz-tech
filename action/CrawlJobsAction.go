@@ -69,6 +69,7 @@ func (r *CrawlJobsAction) startIndeed() chan bool {
 			r.dateParser)
 
 		worker.Url = `http://www.indeed.com/jobs?l=Remote`
+		worker.JobWriter = r.jobWriter
 		worker.Storage = r.storage
 		worker.Crawl()
 	}(doneChannel)

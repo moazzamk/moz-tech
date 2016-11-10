@@ -80,6 +80,7 @@ func main() {
 
 	wm := que.WorkMap{
 		moz_tech.ScanSkillsJob: scanSkills,
+		moz_tech.ScanJobsJob: scanJobs,
 	}
 
 	workers := que.NewWorkerPool(qc, wm, 2)

@@ -97,6 +97,11 @@ func  (r *IndeedJobCrawler) getTotalCount(doc *goquery.Document) int {
 func (r *IndeedJobCrawler) getDetails(jobChannel chan structures.JobDetail, index int) {
 	for job := range jobChannel {
 		doc, _ := goquery.NewDocument(job.Link)
+		job.Title = r.getJobTitle(doc)
+		if job.Title == `` {
+			continue;
+		}
+
 		job.Telecommute, job.Travel = r.getTelecommuteAndTravel(doc)
 		job.Description = r.getJobDescription(doc)
 		job.PostedDate = r.getPostedDate(doc)
@@ -104,7 +109,7 @@ func (r *IndeedJobCrawler) getDetails(jobChannel chan structures.JobDetail, inde
 		job.Employer = r.getEmployer(doc)
 		job.JobType = r.getJobType(doc)
 		job.Skills = r.getJobSkill(doc)
-		job.Title = r.getJobTitle(doc)
+
 		job.Source = `indeed.com`
 
 		fmt.Println(`INDEED`, index, `Writing details for `, job.Link)
