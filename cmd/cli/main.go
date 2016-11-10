@@ -8,6 +8,7 @@ import (
 	"github.com/moazzamk/moz-tech/action"
 	"github.com/moazzamk/moz-tech/structures"
 	"fmt"
+	"flag"
 )
 
 /*
@@ -20,8 +21,11 @@ import (
 
 func main() {
 	fmt.Println(`Cli started`)
+
+	command := flag.String(`cmd`, ``, `hi there`);
 	config := moz_tech.NewAppConfig(`config/config.txt`)
 	esUrl, _ := config.Get(`es_url`)
+	flag.Parse()
 
 	client, err := elastic.NewClient(
 		elastic.SetURL(esUrl),
@@ -35,18 +39,24 @@ func main() {
 
 	fmt.Println(`Elastic client initialized`)
 
-	//client.DeleteIndex(`jobs`).Do()
-	//client.CreateIndex(`jobs`).Do()
-
 	storage := service.NewStorage(client)
 	skillParser := service.NewSkillParser(storage)
 	salaryParser := service.SalaryParser{}
 	dateParser := service.DateParser{}
 
-	fmt.Println(`Starting jobs`)
-	crawlJobs(&salaryParser, &skillParser, &dateParser, config, storage)
-	//crawlTags(&skillParser, config, storage)
 
+	if *command == `del-index` {
+		fmt.Println(`Starting delete index`)
+		(action.NewTruncateIndexAction(client)).Run(`jobs`)
+
+	} else if *command == `crawl-jobs` {
+		fmt.Println(`Starting jobs`)
+		crawlJobs(&salaryParser, &skillParser, &dateParser, config, storage)
+
+	} else if *command == `crawl-tags` {
+		crawlTags(&skillParser, config, storage)
+
+	}
 }
 
 func crawlJobs(
@@ -56,7 +66,6 @@ func crawlJobs(
 	config *structures.Dictionary,
 	storage service.Storage,
 ) {
-
 	action := action.NewCrawlJobsAction(
 		salaryParser,
 		skillParser,

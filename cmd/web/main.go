@@ -65,6 +65,8 @@ func main() {
 	}
 	defer pgxpool.Close()
 
+	fmt.Println(esUrl)
+
 	// Initialize ES
 	// Keep sniffing to false. It causes ES library to fail
 	client, err := elastic.NewClient(

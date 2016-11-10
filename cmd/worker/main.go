@@ -66,7 +66,7 @@ func main() {
 	var err error
 
 	fmt.Println(`Starting worker`)
-	
+
 	if os.Getenv(`ELASTICSEARCH_URL`) == `` {
 		config := moz_tech.NewAppConfig(`config/config.txt`)
 		esUrl, _ = config.Get(`es_url`)
