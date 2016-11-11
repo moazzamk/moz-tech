@@ -49,9 +49,9 @@ func (r *CrawlJobsAction) Run() {
 	var doneChannels []chan bool
 	//doneChannels = append(doneChannels, startRemoteWork(&client, jobDetailWriter))
 	//doneChannels = append(doneChannels, startLinkedIn(&client, jobDetailWriter))
-	//doneChannels = append(doneChannels, r.startStackOverflow())
+	doneChannels = append(doneChannels, r.startStackOverflow())
 	doneChannels = append(doneChannels, r.startIndeed())
-	//doneChannels = append(doneChannels, r.startDice())
+	doneChannels = append(doneChannels, r.startDice())
 
 
 	for i := range doneChannels {
@@ -84,7 +84,7 @@ func (r *CrawlJobsAction) startDice() chan bool {
 	go func(doneChannel chan bool) {
 		fmt.Println(`Starting indeed`)
 		worker := crawler.NewDiceCrawler(r.salaryParser, r.skillParser, r.dateParser)
-		worker.Url = `http://service.dice.com/api/rest/jobsearch/v1/simple.json?pgcnt=500&text=python`
+		worker.Url = `http://service.dice.com/api/rest/jobsearch/v1/simple.json?pgcnt=500&text=remote`
 		worker.JobWriter = r.jobWriter
 		worker.Storage = r.storage
 

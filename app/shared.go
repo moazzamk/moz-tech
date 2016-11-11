@@ -56,11 +56,11 @@ func GetPgxPool(dbURL string) (*pgx.ConnPool, error) {
 func GetConfigVars() (string, string) {
 	var esUrl string
 	var pgUrl string
-	//esUrlKey := `SEARCHBOX_SSL_URL`
-	//pgUrlKey := `HEROKU_POSTGRESQL_AQUA_URL`
+	esUrlKey := `SEARCHBOX_SSL_URL`
+	pgUrlKey := `HEROKU_POSTGRESQL_AQUA_URL`
 
-	esUrlKey := `ELASTICSEARCH_URL`
-	pgUrlKey := `DATABASE_URL`
+	//esUrlKey := `ELASTICSEARCH_URL`
+	//pgUrlKey := `DATABASE_URL`
 
 	fmt.Println(`Starting worker`)
 
