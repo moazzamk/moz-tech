@@ -44,8 +44,10 @@ func scanSkills(j *que.Job) error {
 func scanJobs(j *que.Job) error {
 	storage := service.NewStorage(esClient)
 	skillParser := service.NewSkillParser(storage)
-	crawlAction := action.NewCrawlTagsAction(&skillParser, config, storage)
+	salaryParser := service.SalaryParser{}
+	dateParser := service.DateParser{}
 
+	crawlAction := action.NewCrawlJobsAction(&salaryParser, &skillParser, &dateParser, config, storage)
 	crawlAction.Run()
 
 

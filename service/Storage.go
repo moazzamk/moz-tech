@@ -129,6 +129,10 @@ func (r *ElasticSearchStorage) getHash(str string) string {
 }
 
 func (r *ElasticSearchStorage) AddJob(job structures.JobDetail) {
+	if job.Title == `` {
+		return
+	}
+
 	md5hash := r.getHash(job.Link)
 	esMutex.Lock()
 	defer r.RecoverAddJob(job)
