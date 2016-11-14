@@ -93,14 +93,12 @@
                     term = $routeParams.term;
 
                 $scope.query = term;
-
                 $scope.startSearch = function () {
-                    console.log('CAMMM');
-                    $location.path('/' + term + '/0')    ;
+                    $location.path('/' + $scope.query + '/0')    ;
                 };
 
-                $scope.search = function (term, offset) {
-                    searchService.searchJobs(term, offset, function (data) {
+                $scope.search = function (searchTerm, offset) {
+                    searchService.searchJobs(searchTerm, offset, function (data) {
                         if (typeof data.success == 'undefined') {
                             console.log('data was undefined');
                             return;
@@ -111,7 +109,7 @@
                     })
                 };
 
-                if (term != null && term != '') {
+                if ($scope.query != null && $scope.query != '') {
                     $scope.search(term, offset);
                 }
             }
