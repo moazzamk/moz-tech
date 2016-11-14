@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"strconv"
 	"io/ioutil"
+	"strings"
 )
 
 var (
@@ -77,14 +78,12 @@ func main() {
 
 	esClient = client
 
+
 	fmt.Println("Webserver Initialized")
 	fmt.Println("Template path:" + templatePath)
 
 
-
 	mux := http.NewServeMux()
-
-		mux.Handle("/static", http.StripPrefix("/static/", http.FileServer(http.Dir("./public"))))
 
 	// Routes
 	mux.HandleFunc(`/index/delete`, func (rs http.ResponseWriter, rq *http.Request) {
@@ -195,6 +194,8 @@ func main() {
 	 * Home page
 	 */
 	mux.HandleFunc(`/`, func (rs http.ResponseWriter, rq *http.Request) {
+
+
 		t := template.New(`list.html`)
 		t, _ = t.ParseFiles(templatePath + `/skills/list.html`)
 		err := t.Execute(rs, nil)
@@ -203,9 +204,12 @@ func main() {
 		}
 	})
 
-
-	n := negroni.Classic()
+	n := negroni.New()
+	n.Use(negroni.NewStatic(http.Dir(templatePath + `/../public`)))
 	n.UseHandler(mux)
+
+
+
 
 	portString := os.Getenv(`PORT`)
 	if portString == `` {

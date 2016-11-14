@@ -1,0 +1,31 @@
+<div>
+    <form ng-submit="startSearch()">
+        <input type="text" name="query" class="search-input" ng-model="query" />
+        <input type="submit" value="GO" class="search-submit-btn"/>
+        <div class="clearfix"></div>
+    </form>
+    <div class="clearfix"></div>
+
+
+        <pagination
+                total="totalJobCount"
+                start="start"
+                size="10"
+                query="query"></pagination>
+
+        <ul>
+            <li ng-repeat="job in jobs">
+                <b>{{job.Title}}</b>
+                {{job.Location}}
+                {{job.Skills}}
+                {{job.MaxSalary}}
+                {{job.CalculatedMaxSalary}}
+                {{job.OriginalSalary}}
+
+                <div class="job-source">
+                    <a href="{{job.Link}}">{{job.Source}}</a>
+                </div>
+            </li>
+        </ul>
+
+</div>

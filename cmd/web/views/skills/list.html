@@ -1,9 +1,3 @@
 <div>
     <h2>Skills</h2>
 </div>
-
-<ul>
-    {{ range $item := . }}
-        <li><a href="/skills/del?id={{ $item.id }}">Del</a> {{ $item.skill }}</li>
-    {{ end }}
-</ul>

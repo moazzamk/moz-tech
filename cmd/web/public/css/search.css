@@ -1,0 +1,36 @@
+body {
+    color: #333333;
+}
+.job-source {
+    background-color: #ddeeff;
+    display: inline;
+    padding: 2px 5px;
+    border-radius: 2px;
+}
+.job-source a {
+    color: #333333;
+}
+.pagination {
+    list-style-type: none;
+}
+.pagination li {
+    margin-right: 10px;
+    float: left;
+}
+.search-input {
+    float: left;
+    margin-right: 10px;
+    width: 400px;
+    line-height: 30px;
+    font-size: 25px;
+    float: left;
+    margin-right: 10px;
+}
+.search-submit-btn {
+    float: left;
+    border: none;
+    line-height: 30px;
+}
+.clearfix {
+    clear: both;
+}

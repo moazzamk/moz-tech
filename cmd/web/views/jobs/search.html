@@ -1,155 +1,121 @@
 <html>
-    <style type="text/css">
-        body {
-            color: #333333;
-        }
-        .job-source {
-            background-color: #ddeeff;
-            display: inline;
-            padding: 2px 5px;
-            border-radius: 2px;
-        }
-        .job-source a {
-            color: #333333;
-        }
-        .pagination {
-            list-style-type: none;
-        }
-        .pagination li {
-            margin-right: 10px;
-            float: left;
-        }
-        .search-input {
-            float: left;
-            margin-right: 10px;
-            width: 400px;
-            line-height: 30px;
-            font-size: 25px;
-            float: left;
-            margin-right: 10px;
-        }
-        .search-submit-btn {
-            float: left;
-            border: none;
-            line-height: 30px;
-        }
-        .clearfix {
-            clear: both;
-        }
-    </style>
+    <head>
+        <link rel="stylesheet" type="text/css" href="/css/search.css"/>
+    </head>
     <body ng-app="jobby" role="main" onsubmit="return false">
-        <div ng-controller="SearchController">
-            <form ng-submit="startSearch()">
-                <input type="text" name="query" class="search-input" ng-model="query" />
-                <input type="submit" value="GO" class="search-submit-btn"/>
-                <div class="clearfix"></div>
-            </form>
-            <div class="clearfix"></div>
-
-
-            <pagination
-                    total="totalJobCount"
-                    start="start"
-                    size="10"
-                    query="query"
-                    setScoped="setScopey()"></pagination>
-
-            <ul >
-                <li ng-repeat="job in jobs">
-                    <b>{{job.Title}}</b>
-                    {{job.Location}}
-                    {{job.Skills}}
-                    {{job.MaxSalary}}
-                    {{job.CalculatedMaxSalary}}
-                    {{job.OriginalSalary}}
-
-                    <div class="job-source">
-                        <a href="{{job.Link}}">{{job.Source}}</a>
-                    </div>
-                </li>
-            </ul>
-
-        </div>
+        <ng-view></ng-view>
     </body>
 
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
-
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular-route.js"></script>
     <script type="text/javascript">
-        var app = angular.module('jobby', [])
-                        .filter('range', function() {
-                            return function(input, total) {
-                                total = parseInt(total);
+        var app = angular.module('jobby', ['ngRoute']);
 
-                                for (var i=0; i<total; i++) {
-                                    input.push(i);
-                                }
+        app.config(['$routeProvider', function ($routeProvider) {
+            $routeProvider.when('/:term?/:offset?', {
+                controller: 'SearchController',
+                templateUrl: '/html/search/index.html',
+                resolve: {
+                    term: function ($routeParams) {
+                        console.log($routeParams);
+                        return $routeParams.term;
+                    },
+                    offset: function ($routeParams) {
+                        return $routeParams.offset;
+                    }
+                }
+            })
+            .when('/', {
+                controller: 'SearchController',
+                templateUrl: '/html/search/index.html',
+                resolve: {
+                    term: function ($routeParams) {
+                        console.log('aaaaaaaa');
+                        return '';
+                    },
+                    offset: function ($routeParams) {
+                        return 0;
+                    }
+                }
 
-                                return input;
-                            };
-                        })
-                        .directive('pagination', function () {
-                            console.log(78, arguments);
-                            return {
-                                restrict: 'E',
-                                transclude: true,
-                                replace: true,
-                                scope: {
-                                    totalCount: '=total',
-                                    itemsPerPage: '=size',
-                                    query: '=query',
-                                    start: '=start',
-                                    setScopey: '&'
-                                },
-                                template: '<div>Total: {{totalCount}}<ul class="pagination">' +
-                                    '<li ng-repeat="i in [] | range:pages"><a href=\'#\' ng-click=\'setScoped()\'>{{i+1}}</a></li></ul>' +
-                                '<div class="clearfix"></div></div>',
+            })
+            .otherwise({redirectTo: '/'});
+        }]);
 
-                                link: function (scope) {
-                                    console.log(scope.setScoped, 'hhh');
-                                    scope.$watch('totalCount', function () {
-                                        console.log(scope.setScoped);
+        app.filter('range', function() {
+            return function(input, total) {
+                total = parseInt(total);
 
-                                        scope.pages = Math.ceil(scope.totalCount / scope.itemsPerPage);
-                                    });
-                                }
-                            };
-                    })
-                    .factory('SearchService', ['$http', function ($http) {
-                        return {
-                            searchJobs: function (search, start, callback) {
-                                $http.get('/search?q=' + search + '&start=' + start)
-                                        .then(function (response) {
-                                            callback(response.data)
-                                        });
-                            }
-                        };
-                    }])
-                    .controller('SearchController', ['$scope', 'SearchService', function ($scope, searchService) {
-                        $scope.startSearch = function () {
-                            $scope.start = 0;
-                            $scope.search();
-                        };
+                for (var i=0; i<total; i++) {
+                    input.push(i);
+                }
 
-                        $scope.search = function () {
-                            if (!$scope.start) {
-                                $scope.start = 0;
-                            }
-                            searchService.searchJobs($scope.query, $scope.start, function (data) {
-                                if (typeof data.success == 'undefined') {
-                                    console.log('data was undefined');
-                                    return;
-                                }
+                return input;
+            };
+        });
+        app.directive('pagination', function () {
+            console.log(78, arguments);
+            return {
+                restrict: 'E',
+                transclude: true,
+                replace: true,
+                scope: {
+                    totalCount: '=total',
+                    itemsPerPage: '=size',
+                    query: '=query',
+                    start: '=start'
+                },
+                template: '<div>Total: {{totalCount}}<ul class="pagination">' +
+                        '<li ng-repeat="i in [] | range:pages"><a href=\'#/{{query}}/{{i * itemsPerPage}}\'>{{i+1}}</a></li></ul>' +
+                    '<div class="clearfix"></div></div>',
 
-                                $scope.totalJobCount = data.total;
-                                $scope.jobs = data.data;
-                            })
-                        };
+                link: function (scope) {
+                    scope.$watch('totalCount', function () {
+                        scope.pages = Math.ceil(scope.totalCount / scope.itemsPerPage);
+                    });
+                }
+            };
+        })
+        .factory('SearchService', ['$http', function ($http) {
+            return {
+                searchJobs: function (search, start, callback) {
+                    $http.get('/search?q=' + search + '&start=' + start)
+                            .then(function (response) {
+                                callback(response.data)
+                            });
+                }
+            };
+        }]);
 
-                        $scope.setScopey = function (start) {
-                            console.log('setty');
-                            $scope.start = start;
-                            $scope.search();
+        app.controller('SearchController', ['$scope', '$location', '$routeParams', 'SearchService',
+            function ($scope, $location, $routeParams, searchService) {
+                var offset = $routeParams.offset,
+                    term = $routeParams.term;
+
+                $scope.query = term;
+
+                $scope.startSearch = function () {
+                    console.log('CAMMM');
+                    $location.path('/' + term + '/0')    ;
+                };
+
+                $scope.search = function (term, offset) {
+                    searchService.searchJobs(term, offset, function (data) {
+                        if (typeof data.success == 'undefined') {
+                            console.log('data was undefined');
+                            return;
                         }
-                    }]);
+
+                        $scope.totalJobCount = data.total;
+                        $scope.jobs = data.data;
+                    })
+                };
+
+                if (term != null && term != '') {
+                    $scope.search(term, offset);
+                }
+            }
+        ]);
+
     </script>
 </html>
