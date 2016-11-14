@@ -5,11 +5,13 @@ A project to crawl job listings on the web and calculate which technologies are 
 For example: PHP jobs almost always require MySQL knowledge.
 
 
-## You can run program on cli using :
+## For cli:
+
+go run cmd/cli/main.go
+
+## For web:
 
 go run cmd/web/main.go
-
-
 
 For any errors of missing dependencies, you can do:
 
