@@ -7,8 +7,10 @@ For example: PHP jobs almost always require MySQL knowledge.
 
 ## You can run program on cli using :
 
-go run main.go
+go run cmd/web/main.go
+
+
 
 For any errors of missing dependencies, you can do:
 
-go get <dependency>
+go get &lt;dependency>
