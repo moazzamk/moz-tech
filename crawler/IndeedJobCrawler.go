@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"fmt"
 	"log"
+	"net/http"
 )
 
 type IndeedJobCrawler struct {
@@ -17,16 +18,17 @@ type IndeedJobCrawler struct {
 	Skills    []string
 	Url       string
 	Host      string
+	Client    http.Client
 
-	salaryParser *service.SalaryParser
-	skillParser *service.SkillParser
-	dateParser *service.DateParser
+	salaryParser service.ISalaryParser
+	skillParser service.ISkillParser
+	dateParser service.IDateParser
 }
 
 func NewIndeedJobCrawler(
-	salaryParser *service.SalaryParser,
-	skillParser *service.SkillParser,
-	dateParser *service.DateParser) *IndeedJobCrawler {
+	salaryParser service.ISalaryParser,
+	skillParser service.ISkillParser,
+	dateParser service.IDateParser) *IndeedJobCrawler {
 
 	ret := IndeedJobCrawler{
 		salaryParser: salaryParser,
@@ -38,21 +40,23 @@ func NewIndeedJobCrawler(
 }
 
 func (r *IndeedJobCrawler) Crawl() {
-	jobsPerPage := 10
 	jobChannel := make(chan structures.JobDetail)
 	url := r.Url
 
 	fmt.Println(`INDEED`, `Starting indeed crawler`)
 
+	doc, _ := goquery.NewDocument(url)
+	fmt.Println(doc.Html())
+	fmt.Println(url)
+	totalCount := r.getTotalCount(doc)
+	jobsPerPage := r.getJobPerPage(doc)
+
 	// Start routines for getting job details
-	for i := 0; i < 25; i++ {
+	for i := 0; i < jobsPerPage; i++ {
 		go r.getDetails(jobChannel, i)
 	}
 
-	doc, _ := goquery.NewDocument(url)
-	totalCount := r.getTotalCount(doc)
-
-	log.Println(`INDEED`, `Total jobs:`, totalCount)
+	log.Println(`INDEED`, `Total jobs:`, totalCount, jobsPerPage)
 
 	for i := 0; i < totalCount; i += jobsPerPage {
 		fmt.Println(`INDEED`, `Getting page`, i)
@@ -62,23 +66,48 @@ func (r *IndeedJobCrawler) Crawl() {
 			fmt.Println(err)
 		}
 
-		doc.Find(`a.jobtitle`).Each(func (i int, s *goquery.Selection) {
+		doc.Find(`a.turnstileLink`).Each(func (i int, s *goquery.Selection) {
 			link, err := s.Attr(`href`)
 			if err == false {
 				fmt.Println(`INDEED ERR`, 67, err)
 				return
 			}
-			job := structures.JobDetail{
-				Link: `http://indeed.com` + link,
+
+			if !strings.HasPrefix(link, `http://`) {
+				link = `http://indeed.com` + link
 			}
+
+			job := structures.JobDetail{
+				Link: link,
+			}
+
 			fmt.Println(`INDEED`, `Add to queue`, job.Link)
 			jobChannel <- job
 		})
 	}
 }
 
+func  (r *IndeedJobCrawler) getJobPerPage(doc *goquery.Document) int {
+	var ret int
+
+	doc.Find(`#searchCount`).Each(func(i int, s *goquery.Selection) {
+		numRegex := regexp.MustCompile(`[0-9,]+`)
+		regex := regexp.MustCompile(`to [^of]+`)
+		tmp := s.Text()
+		str := regex.FindString(tmp)
+		str = numRegex.FindString(str)
+		str = strings.Replace(str, `,`, ``, -1)
+
+		fmt.Println(`INDEEDY1`, `|` + str + `|`, tmp)
+		ret, _ = strconv.Atoi(str)
+	})
+
+	return ret;
+}
+
 func  (r *IndeedJobCrawler) getTotalCount(doc *goquery.Document) int {
 	var ret int
+
 	doc.Find(`#searchCount`).Each(func(i int, s *goquery.Selection) {
 		numRegex := regexp.MustCompile(`[0-9,]+`)
 		regex := regexp.MustCompile(`of [^<]+`)
@@ -87,7 +116,7 @@ func  (r *IndeedJobCrawler) getTotalCount(doc *goquery.Document) int {
 		str = numRegex.FindString(str)
 		str = strings.Replace(str, `,`, ``, -1)
 
-		fmt.Println(`INDEED`, `|` + str + `|`)
+		fmt.Println(`INDEEDY`, `|` + str + `|`, tmp)
 		ret, _ = strconv.Atoi(str)
 	})
 
