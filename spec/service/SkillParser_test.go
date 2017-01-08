@@ -6,11 +6,10 @@ import (
 	. "github.com/onsi/gomega"
 
 	"testing"
-	//"github.com/moazzamk/moz-tech/structures"
 
 	"github.com/golang/mock/gomock"
-	"github.com/moazzamk/moz-tech/mock"
 	"github.com/moazzamk/moz-tech/structures"
+	"github.com/moazzamk/moz-tech/mock/service"
 )
 
 

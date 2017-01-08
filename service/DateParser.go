@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+	"fmt"
 )
 
 type DateParser struct {
@@ -18,7 +19,6 @@ func (r *DateParser) Parse(str string) string {
 	if strings.Contains(str, `yesterday`) {
 		ts := time.Now()
 		return ts.AddDate(0, 0, -1).Format(`2006-01-02`)
-
 	}
 
 	if strings.Contains(str, `ago`) {
@@ -41,7 +41,7 @@ func (r *DateParser) Parse(str string) string {
 			ts = ts.AddDate(0, -1 * sub, 0)
 		}
 
-		return ts.Format(`2006-01-02`)
+		return fmt.Sprintf("%d-%d-%d", ts.Year(), ts.Month(), ts.Day())
 	} else {
 
 		formats := []string{
@@ -52,7 +52,7 @@ func (r *DateParser) Parse(str string) string {
 		for _, format := range formats {
 			ts, err := time.Parse(format, str)
 			if err == nil {
-				return ts.Format(`2006-01-02`)
+				return fmt.Sprintf("%d-%02d-%02d", ts.Year(), ts.Month(), ts.Day())
 			}
 		}
 	}
