@@ -16,3 +16,9 @@ go run cmd/web/main.go
 For any errors of missing dependencies, you can do:
 
 go get &lt;dependency>
+
+##Generate mocks:
+mockgen --source=somefile.go --destination=mock/somefile.go
+
+## To run tests:
+ginkgo
