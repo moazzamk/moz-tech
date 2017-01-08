@@ -46,8 +46,6 @@ func (r *IndeedJobCrawler) Crawl() {
 	fmt.Println(`INDEED`, `Starting indeed crawler`)
 
 	doc, _ := goquery.NewDocument(url)
-	fmt.Println(doc.Html())
-	fmt.Println(url)
 	totalCount := r.getTotalCount(doc)
 	jobsPerPage := r.getJobPerPage(doc)
 

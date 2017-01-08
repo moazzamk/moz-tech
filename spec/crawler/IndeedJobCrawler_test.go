@@ -25,8 +25,8 @@ func TestIndeedJobCrawler(t *testing.T) {
 }
 
 var _ = Describe("Indeed job crawler", func () {
-	Context("stores stuff", func () {
-		It("something", func () {
+	Context("Search listings", func () {
+		It("crawls multiple pages of job listings", func () {
 			var lastPage string
 
 			server := httptest.NewServer(http.HandlerFunc(func(rs http.ResponseWriter, rq *http.Request) {
@@ -37,7 +37,6 @@ var _ = Describe("Indeed job crawler", func () {
 						fmt.Println("FL", err)
 					}
 
-					fmt.Println(string(content))
 					rs.Write(content)
 				}
 			}))
@@ -58,6 +57,5 @@ var _ = Describe("Indeed job crawler", func () {
 
 			Expect(lastPage).To(Equal(`1`))
 		})
-
 	})
 })
